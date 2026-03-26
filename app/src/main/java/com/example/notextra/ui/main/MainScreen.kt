@@ -91,12 +91,12 @@ fun MainScreen(
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Text("button 1", color = Color.White) }
+                    icon = { Text("Note", color = Color.White) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Text("button 2", color = Color.White) }
+                    icon = { Text("List", color = Color.White) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,

@@ -73,15 +73,12 @@ fun ListDetailScreen(
     viewModel: NoteViewModel,
     onNavigateBack: () -> Unit
 ) {
-    // Mengambil info List Induk
     val listNotes by viewModel.listNotes.collectAsState()
     val note = listNotes.find { it.id == noteId }
 
-    // 1. Mengambil data Baris Tabel (List Items) secara reaktif
     val listItemsFlow = remember(noteId) { viewModel.getListItems(noteId) }
     val listItems by listItemsFlow.collectAsState()
 
-    // 2. State untuk menampilkan Pop-up Dialog Insert Data
     var showAddDataDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -92,14 +89,28 @@ fun ListDetailScreen(
     var showSaveDialog by remember { mutableStateOf(false) }
     var showBackDialog by remember { mutableStateOf(false) }
 
-    // Fungsi utama untuk menyelesaikan perubahan dan kembali
+    // --- TAHAP 3: STATE UNTUK SORTING ---
+    var showSortMenu by remember { mutableStateOf(false) }
+    var sortOption by remember { mutableStateOf("Default") }
+
+    // Logika Pemilahan Data (Sorting) secara Reaktif
+    val displayedItems = remember(listItems, sortOption) {
+        when (sortOption) {
+            "A-Z" -> listItems.sortedBy { it.nama.lowercase() }
+            "Z-A" -> listItems.sortedByDescending { it.nama.lowercase() }
+            else -> listItems // Default: Kembali ke urutan asli dari database
+        }
+    }
+
     val performSave = {
         focusManager.clearFocus()
+        if (hasChanges && note != null) {
+            viewModel.updateNote(note, note.title, note.content)
+        }
         android.widget.Toast.makeText(context, "Perubahan berhasil disimpan", android.widget.Toast.LENGTH_SHORT).show()
         onNavigateBack()
     }
 
-    // Logika Mencegat Tombol Back Fisik HP
     androidx.activity.compose.BackHandler {
         if (hasChanges) showBackDialog = true else onNavigateBack()
     }
@@ -130,7 +141,6 @@ fun ListDetailScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // --- CARD 1: JUDUL LIST (DIKEMBALIKAN KE STATIS) ---
             Card(
                 colors = CardDefaults.cardColors(containerColor = AppSecondaryColor),
                 modifier = Modifier.fillMaxWidth()
@@ -156,14 +166,12 @@ fun ListDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- CARD 2: TABEL SPREADSHEET ---
             Card(
                 colors = CardDefaults.cardColors(containerColor = AppPrimaryColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
 
-                    // Tombol Add Data yang memicu Pop-up
                     Button(
                         onClick = { showAddDataDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor),
@@ -190,19 +198,44 @@ fun ListDetailScreen(
                             modifier = Modifier.height(36.dp)
                         ) { Text("Filter", fontSize = 12.sp) }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { /* TODO di Tahap 3 nanti */ },
-                            colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor.copy(alpha = 0.8f)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.height(36.dp)
-                        ) { Text("Sort", fontSize = 12.sp) }
+
+                        // --- TOMBOL SORTING ---
+                        Box {
+                            Button(
+                                onClick = { showSortMenu = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor.copy(alpha = 0.8f)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                // Teks tombol berubah sesuai pilihan
+                                Text(if (sortOption == "Default") "Sort" else sortOption, fontSize = 12.sp)
+                            }
+
+                            // Menu Dropdown Sort
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Default", fontSize = 12.sp) },
+                                    onClick = { sortOption = "Default"; showSortMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("A - Z (Nama)", fontSize = 12.sp) },
+                                    onClick = { sortOption = "A-Z"; showSortMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Z - A (Nama)", fontSize = 12.sp) },
+                                    onClick = { sortOption = "Z-A"; showSortMenu = false }
+                                )
+                            }
+                        }
                     }
 
                     // TABEL UTAMA
                     val columnWidths = listOf(40.dp, 100.dp, 100.dp, 120.dp, 120.dp, 60.dp)
 
                     Column(modifier = Modifier.fillMaxWidth().border(1.dp, Color.White).horizontalScroll(rememberScrollState())) {
-                        // Header Tabel
                         Row(modifier = Modifier.background(TableHeaderColor)) {
                             TableCellHeader("No", columnWidths[0])
                             TableCellHeader("Nama", columnWidths[1])
@@ -212,12 +245,12 @@ fun ListDetailScreen(
                             TableCellHeader("Check", columnWidths[5])
                         }
 
-                        // Isi Tabel
-                        val displayRowCount = max(3, listItems.size)
+                        // MENGGUNAKAN displayedItems (Data yang sudah disortir)
+                        val displayRowCount = max(3, displayedItems.size)
                         for (i in 0 until displayRowCount) {
                             Row(modifier = Modifier.background(Color.White)) {
-                                if (i < listItems.size) {
-                                    val item = listItems[i]
+                                if (i < displayedItems.size) {
+                                    val item = displayedItems[i]
                                     TableCellBody(item.sequenceNumber.toString(), columnWidths[0])
                                     TableCellBody(item.nama, columnWidths[1])
 
@@ -250,7 +283,6 @@ fun ListDetailScreen(
         }
     }
 
-    // 4. POP-UP DIALOG INSERT DATA
     if (showAddDataDialog) {
         var nama by remember { mutableStateOf("") }
         var catatan1 by remember { mutableStateOf("") }
@@ -279,7 +311,6 @@ fun ListDetailScreen(
         }
     }
 
-    // --- DIALOG SIMPAN PERUBAHAN ---
     if (showSaveDialog) {
         com.example.notextra.ui.components.AppBaseDialog(
             title = "Simpan Perubahan",
@@ -306,7 +337,6 @@ fun ListDetailScreen(
         }
     }
 
-    // --- DIALOG BACK (Perubahan Belum Disimpan) ---
     if (showBackDialog) {
         com.example.notextra.ui.components.AppBaseDialog(
             title = "Perubahan Belum Disimpan",
@@ -334,7 +364,6 @@ fun ListDetailScreen(
     }
 }
 
-// --- KOMPONEN BANTUAN UNTUK TABEL ---
 @Composable
 fun TableCellHeader(text: String, width: Dp) {
     Box(modifier = Modifier.width(width).border(0.5.dp, Color.LightGray).padding(8.dp), contentAlignment = Alignment.Center) {
