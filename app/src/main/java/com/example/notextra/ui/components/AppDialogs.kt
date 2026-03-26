@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.notextra.ui.theme.AppDeleteColor
 import com.example.notextra.ui.theme.DialogBackgroundColor
 import com.example.notextra.ui.theme.DialogButtonColor
 
@@ -34,36 +35,28 @@ fun AppBaseDialog(
     title: String,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
+    onDiscard: (() -> Unit)? = null, // Parameter baru: Tombol Discard (Opsional)
     confirmText: String = "Simpan",
     dismissText: String = "Batal",
+    discardText: String = "Buang",
     content: @Composable () -> Unit
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = DialogBackgroundColor)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center,
+                    text = title, fontSize = 20.sp, fontWeight = FontWeight.Medium,
+                    color = Color.Black, textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                 )
 
@@ -71,31 +64,38 @@ fun AppBaseDialog(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    // Tombol 1: Buang / Discard (Hanya muncul jika onDiscard diisi)
+                    if (onDiscard != null) {
+                        Button(
+                            onClick = onDiscard,
+                            colors = ButtonDefaults.buttonColors(containerColor = AppDeleteColor),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
+                        ) { Text(discardText, color = Color.White, fontSize = 11.sp) }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
+                    // Tombol 2: Batal / Lanjut Edit
                     Button(
                         onClick = onDismissRequest,
-                        // Mengambil warna dari Color.kt
                         colors = ButtonDefaults.buttonColors(containerColor = DialogButtonColor),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(48.dp)
-                    ) {
-                        Text(dismissText, color = Color.White)
-                    }
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
+                    ) { Text(dismissText, color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center) }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
+                    // Tombol 3: Simpan
                     Button(
                         onClick = onConfirm,
-                        // Mengambil warna dari Color.kt
                         colors = ButtonDefaults.buttonColors(containerColor = DialogButtonColor),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f).height(48.dp)
-                    ) {
-                        Text(confirmText, color = Color.White)
-                    }
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
+                    ) { Text(confirmText, color = Color.White, fontSize = 11.sp) }
                 }
             }
         }

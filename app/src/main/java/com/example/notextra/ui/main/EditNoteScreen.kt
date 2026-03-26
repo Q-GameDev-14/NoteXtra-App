@@ -220,15 +220,19 @@ fun EditNoteScreen(
         AppBaseDialog(
             title = "Perubahan Belum Disimpan",
             confirmText = "Simpan",
-            dismissText = "Batal",
-            onDismissRequest = { showBackDialog = false },
-            onConfirm = {
+            dismissText = "Lanjut", // Sesuai idemu
+            discardText = "Buang",
+            onDismissRequest = { showBackDialog = false }, // Aksi Lanjut
+            onConfirm = { // Aksi Simpan
                 showBackDialog = false
-                // BUG FIX: Beri jeda 150ms agar animasi dialog selesai sebelum layar pindah
                 scope.launch {
                     delay(150)
                     performSave()
                 }
+            },
+            onDiscard = { // Aksi Buang (Baru)
+                showBackDialog = false
+                onNavigateBack() // Kembali tanpa memanggil performSave
             }
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -239,7 +243,7 @@ fun EditNoteScreen(
                     tint = AppDeleteColor
                 )
                 Text(
-                    text = "Perubahan belum disimpan, apakah Anda ingin menyimpannya terlebih dahulu?",
+                    text = "Perubahan belum disimpan, apa yang ingin Anda lakukan?",
                     color = Color.Black,
                     textAlign = TextAlign.Center
                 )

@@ -63,6 +63,7 @@ import com.example.notextra.ui.theme.StatusSelesaiColor
 import com.example.notextra.ui.theme.TableAccentColor
 import com.example.notextra.ui.theme.TableHeaderColor
 import com.example.notextra.utils.DateUtils
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
@@ -89,16 +90,27 @@ fun ListDetailScreen(
     var showSaveDialog by remember { mutableStateOf(false) }
     var showBackDialog by remember { mutableStateOf(false) }
 
-    // --- TAHAP 3: STATE UNTUK SORTING ---
+    // State Sorting & Filtering
     var showSortMenu by remember { mutableStateOf(false) }
     var sortOption by remember { mutableStateOf("Default") }
 
-    // Logika Pemilahan Data (Sorting) secara Reaktif
-    val displayedItems = remember(listItems, sortOption) {
+    var showFilterMenu by remember { mutableStateOf(false) }
+    var filterOption by remember { mutableStateOf("Default") }
+
+    // Logika Pintar: Filter dulu, baru di-Sort
+    val displayedItems = remember(listItems, sortOption, filterOption) {
+        val filtered = when (filterOption) {
+            "Belum" -> listItems.filter { it.status == "Belum" }
+            "Selesai" -> listItems.filter { it.status == "Selesai" }
+            "In Progress" -> listItems.filter { it.status == "In Progress" }
+            "Ditunda" -> listItems.filter { it.status == "Ditunda" }
+            else -> listItems
+        }
+
         when (sortOption) {
-            "A-Z" -> listItems.sortedBy { it.nama.lowercase() }
-            "Z-A" -> listItems.sortedByDescending { it.nama.lowercase() }
-            else -> listItems // Default: Kembali ke urutan asli dari database
+            "A-Z" -> filtered.sortedBy { it.nama.lowercase() }
+            "Z-A" -> filtered.sortedByDescending { it.nama.lowercase() }
+            else -> filtered
         }
     }
 
@@ -135,11 +147,7 @@ fun ListDetailScreen(
         containerColor = AppBackgroundColor
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp).verticalScroll(rememberScrollState())
         ) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = AppSecondaryColor),
@@ -150,17 +158,8 @@ fun ListDetailScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = note?.title ?: "Judul List",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = note?.let { DateUtils.formatTimestamp(it.timestamp) } ?: "tanggal",
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 12.sp
-                    )
+                    Text(text = note?.title ?: "Judul List", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                    Text(text = note?.let { DateUtils.formatTimestamp(it.timestamp) } ?: "tanggal", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
                 }
             }
 
@@ -181,7 +180,6 @@ fun ListDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Header Card (Search, Filter, Sort)
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -191,12 +189,32 @@ fun ListDetailScreen(
                             Text("Search", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { android.widget.Toast.makeText(context, "Fitur Filter belum tersedia", android.widget.Toast.LENGTH_SHORT).show() },
-                            colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor.copy(alpha = 0.8f)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.height(36.dp)
-                        ) { Text("Filter", fontSize = 12.sp) }
+
+                        // --- TOMBOL FILTER ---
+                        Box {
+                            // 1. Logika penentuan warna tombol secara dinamis
+                            val filterButtonColor = when (filterOption) {
+                                "Selesai" -> StatusSelesaiColor
+                                "In Progress" -> StatusInProgressColor
+                                "Ditunda" -> StatusDitundaColor
+                                "Belum" -> StatusBelumColor
+                                else -> TableAccentColor.copy(alpha = 0.8f) // Warna ungu default
+                            }
+                            Button(
+                                onClick = { showFilterMenu = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = filterButtonColor),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                            ) { Text(if (filterOption == "Default") "Filter" else filterOption, fontSize = 11.sp) }
+
+                            DropdownMenu(expanded = showFilterMenu, onDismissRequest = { showFilterMenu = false }) {
+                                listOf("Default", "Belum", "Selesai", "In Progress", "Ditunda").forEach { opt ->
+                                    DropdownMenuItem(text = { Text(opt, fontSize = 12.sp) }, onClick = { filterOption = opt; showFilterMenu = false })
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.width(8.dp))
 
                         // --- TOMBOL SORTING ---
@@ -205,34 +223,18 @@ fun ListDetailScreen(
                                 onClick = { showSortMenu = true },
                                 colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor.copy(alpha = 0.8f)),
                                 shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.height(36.dp)
-                            ) {
-                                // Teks tombol berubah sesuai pilihan
-                                Text(if (sortOption == "Default") "Sort" else sortOption, fontSize = 12.sp)
-                            }
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                            ) { Text(if (sortOption == "Default") "Sort" else sortOption, fontSize = 11.sp) }
 
-                            // Menu Dropdown Sort
-                            DropdownMenu(
-                                expanded = showSortMenu,
-                                onDismissRequest = { showSortMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Default", fontSize = 12.sp) },
-                                    onClick = { sortOption = "Default"; showSortMenu = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("A - Z (Nama)", fontSize = 12.sp) },
-                                    onClick = { sortOption = "A-Z"; showSortMenu = false }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Z - A (Nama)", fontSize = 12.sp) },
-                                    onClick = { sortOption = "Z-A"; showSortMenu = false }
-                                )
+                            DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                listOf("Default", "A-Z", "Z-A").forEach { opt ->
+                                    DropdownMenuItem(text = { Text(opt, fontSize = 12.sp) }, onClick = { sortOption = opt; showSortMenu = false })
+                                }
                             }
                         }
                     }
 
-                    // TABEL UTAMA
                     val columnWidths = listOf(40.dp, 100.dp, 100.dp, 120.dp, 120.dp, 60.dp)
 
                     Column(modifier = Modifier.fillMaxWidth().border(1.dp, Color.White).horizontalScroll(rememberScrollState())) {
@@ -245,8 +247,12 @@ fun ListDetailScreen(
                             TableCellHeader("Check", columnWidths[5])
                         }
 
-                        // MENGGUNAKAN displayedItems (Data yang sudah disortir)
-                        val displayRowCount = max(3, displayedItems.size)
+                        // Logika UX: Baris minimal 3 hanya berlaku jika tidak ada filter yang aktif.
+                        val displayRowCount = if (filterOption == "Default") {
+                            max(3, displayedItems.size)
+                        } else {
+                            displayedItems.size
+                        }
                         for (i in 0 until displayRowCount) {
                             Row(modifier = Modifier.background(Color.White)) {
                                 if (i < displayedItems.size) {
@@ -283,6 +289,7 @@ fun ListDetailScreen(
         }
     }
 
+    // --- POPUP DIALOGS ---
     if (showAddDataDialog) {
         var nama by remember { mutableStateOf("") }
         var catatan1 by remember { mutableStateOf("") }
@@ -319,19 +326,11 @@ fun ListDetailScreen(
             onDismissRequest = { showSaveDialog = false },
             onConfirm = {
                 showSaveDialog = false
-                scope.launch {
-                    kotlinx.coroutines.delay(150)
-                    performSave()
-                }
+                scope.launch { delay(150); performSave() }
             }
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp),
-                    tint = AppPrimaryColor
-                )
+                Icon(imageVector = Icons.Default.Info, contentDescription = null, modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp), tint = AppPrimaryColor)
                 Text("Apakah Anda yakin ingin menyimpan perubahan?", textAlign = TextAlign.Center)
             }
         }
@@ -341,28 +340,28 @@ fun ListDetailScreen(
         com.example.notextra.ui.components.AppBaseDialog(
             title = "Perubahan Belum Disimpan",
             confirmText = "Simpan",
-            dismissText = "Batal",
+            dismissText = "Lanjut",
+            discardText = "Buang",
             onDismissRequest = { showBackDialog = false },
             onConfirm = {
                 showBackDialog = false
-                scope.launch {
-                    kotlinx.coroutines.delay(150)
-                    performSave()
-                }
+                scope.launch { delay(150); performSave() }
+            },
+            onDiscard = {
+                showBackDialog = false
+                onNavigateBack() // Catatan: Ini hanya mengabaikan perubahan timestamp di layar utama
             }
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp),
-                    tint = AppDeleteColor
-                )
-                Text("Perubahan belum disimpan, apakah Anda ingin menyimpannya terlebih dahulu?", textAlign = TextAlign.Center)
+                Icon(imageVector = Icons.Default.Info, contentDescription = null, modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp), tint = AppDeleteColor)
+                Text("Perubahan belum disimpan, apa yang ingin Anda lakukan?", textAlign = TextAlign.Center)
             }
         }
     }
 }
+
+// ... (KODE KOMPONEN TABLECELL DI BAWAHNYA TETAP SAMA SEPERTI SEBELUMNYA) ...
+// (Tambahkan fungsi TableCellHeader, TableCellBody, TableCellDropdown, dan TableCellCheckbox di sini agar tidak error)
 
 @Composable
 fun TableCellHeader(text: String, width: Dp) {
@@ -390,31 +389,15 @@ fun TableCellDropdown(status: String, width: Dp, onStatusChange: (String) -> Uni
     }
 
     Box(
-        modifier = Modifier
-            .width(width)
-            .height(48.dp)
-            .border(0.5.dp, Color.LightGray)
-            .clickable { expanded = true }
-            .padding(6.dp),
+        modifier = Modifier.width(width).height(48.dp).border(0.5.dp, Color.LightGray).clickable { expanded = true }.padding(6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(badgeColor, RoundedCornerShape(6.dp)),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize().background(badgeColor, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
             Text(text = status, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option, fontSize = 12.sp) },
-                    onClick = {
-                        onStatusChange(option)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem(text = { Text(option, fontSize = 12.sp) }, onClick = { onStatusChange(option); expanded = false })
             }
         }
     }
