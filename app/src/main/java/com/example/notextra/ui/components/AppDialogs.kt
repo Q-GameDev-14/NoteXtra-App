@@ -35,10 +35,11 @@ fun AppBaseDialog(
     title: String,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
-    onDiscard: (() -> Unit)? = null, // Parameter baru: Tombol Discard (Opsional)
+    onDiscard: (() -> Unit)? = null,
     confirmText: String = "Simpan",
     dismissText: String = "Batal",
     discardText: String = "Buang",
+    isConfirmEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     Dialog(
@@ -91,7 +92,12 @@ fun AppBaseDialog(
                     // Tombol 3: Simpan
                     Button(
                         onClick = onConfirm,
-                        colors = ButtonDefaults.buttonColors(containerColor = DialogButtonColor),
+                        enabled = isConfirmEnabled,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DialogButtonColor,
+                            disabledContainerColor = Color.LightGray,
+                            disabledContentColor = Color.DarkGray
+                        ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f).height(48.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
