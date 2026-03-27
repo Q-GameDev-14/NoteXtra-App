@@ -24,6 +24,18 @@ import com.example.notextra.domain.model.Note
 import com.example.notextra.ui.theme.AppPrimaryColor
 import com.example.notextra.utils.DateUtils
 
+// TIDAK TERPAKAI PADA VERSI SEKARANG
+/**
+ * [NoteCard] adalah komponen UI untuk menampilkan ringkasan catatan (Desain Versi 1.0).
+ * * Catatan Developer: Saat ini halaman utama (MainScreen) sudah beralih menggunakan
+ * komponen 'AllNoteCardItem' dengan fitur Swipe-to-Delete. Komponen ini tetap
+ * dipertahankan sebagai cadangan (fallback) atau untuk digunakan di halaman sekunder.
+ *
+ * @param note Objek data Note yang isinya akan ditampilkan (Judul dan Tanggal).
+ * @param onDeleteClick Aksi ketika ikon tempat sampah diklik secara langsung.
+ * @param onClick Aksi ketika keseluruhan area kartu diklik (misal: membuka detail catatan).
+ * @param modifier Parameter standar Compose untuk mengatur ukuran atau padding luar.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteCard(
@@ -32,16 +44,19 @@ fun NoteCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // --- BUNGKUSAN UTAMA KARTU ---
     Card(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = AppPrimaryColor
+            containerColor = AppPrimaryColor // Warna dasar kartu
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp) // Efek bayangan agar menonjol
     ) {
+
+        // --- ISI KARTU (Layout Menyamping / Horizontal) ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -49,23 +64,27 @@ fun NoteCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+
+            // 1. BAGIAN KIRI: Teks Judul Catatan
             Text(
                 text = note.title,
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                maxLines = 1,                     // Dibatasi 1 baris saja
+                overflow = TextOverflow.Ellipsis, // Jika kepanjangan, diakhiri titik-titik (...)
+                modifier = Modifier.weight(1f)    // Memakan sisa ruang kosong agar fleksibel
             )
 
+            // 2. BAGIAN TENGAH: Teks Tanggal (Diubah dari format Unix ke Tanggal mudah dibaca)
             Text(
                 text = DateUtils.formatTimestamp(note.timestamp),
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color.White.copy(alpha = 0.7f), // Putih agak transparan agar tidak mendominasi
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
 
+            // 3. BAGIAN KANAN: Tombol Hapus (Ikon Tong Sampah)
             IconButton(onClick = onDeleteClick) {
                 Icon(
                     imageVector = Icons.Default.Delete,

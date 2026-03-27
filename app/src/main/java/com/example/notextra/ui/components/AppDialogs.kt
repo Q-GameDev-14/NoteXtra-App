@@ -30,6 +30,9 @@ import com.example.notextra.ui.theme.AppDeleteColor
 import com.example.notextra.ui.theme.DialogBackgroundColor
 import com.example.notextra.ui.theme.DialogButtonColor
 
+/**
+ * [AppBaseDialog] adalah cetakan dasar (Template) untuk semua dialog peringatan di aplikasi.
+ * Dengan menggunakan ini, desain dialog di seluruh aplikasi akan seragam dan konsisten.*/
 @Composable
 fun AppBaseDialog(
     title: String,
@@ -47,26 +50,43 @@ fun AppBaseDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = DialogBackgroundColor)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // --- SECTION 1: HEADER (JUDUL) ---
                 Text(
-                    text = title, fontSize = 20.sp, fontWeight = FontWeight.Medium,
-                    color = Color.Black, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    text = title,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
                 )
 
+                // --- SECTION 2: KONTEN KUSTOM ---
+                // Menampilkan UI apapun yang disisipkan saat fungsi ini dipanggil
                 content()
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    // Tombol 1: Buang / Discard (Hanya muncul jika onDiscard diisi)
+                // --- SECTION 3: AREA TOMBOL (ACTION BUTTONS) ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Tombol 1: Buang / Discard
                     if (onDiscard != null) {
                         Button(
                             onClick = onDiscard,
@@ -74,7 +94,9 @@ fun AppBaseDialog(
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f).height(48.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
-                        ) { Text(discardText, color = Color.White, fontSize = 11.sp) }
+                        ) {
+                            Text(discardText, color = Color.White, fontSize = 11.sp)
+                        }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
 
@@ -85,7 +107,9 @@ fun AppBaseDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f).height(48.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
-                    ) { Text(dismissText, color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center) }
+                    ) {
+                        Text(dismissText, color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
@@ -101,7 +125,9 @@ fun AppBaseDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f).height(48.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
-                    ) { Text(confirmText, color = Color.White, fontSize = 11.sp) }
+                    ) {
+                        Text(confirmText, color = Color.White, fontSize = 11.sp)
+                    }
                 }
             }
         }

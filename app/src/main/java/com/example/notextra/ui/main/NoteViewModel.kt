@@ -11,8 +11,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**[NoteViewModel] berfungsi sebagai jembatan antara tampilan UI dan database (Repository).*/
 class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
-
+    // ==========================================
+    // 1. STATE MANAGEMENT (Aliran Data ke UI)
+    // ==========================================
     val notes: StateFlow<List<Note>> = repository.getNotesByType("REGULAR")
         .stateIn(
             scope = viewModelScope,
@@ -27,6 +30,9 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
             initialValue = emptyList()
         )
 
+    // ==========================================
+    // 2. FUNGSI UNTUK NOTE UTAMA (Induk)
+    // ==========================================
     fun addNote(title: String, content: String, noteType: String = "REGULAR", category: String = "Work", isPinned: Boolean = false) {
         viewModelScope.launch {
             val newNote = Note(
@@ -60,8 +66,9 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
         }
     }
 
-    // --- List Item (Tabel) Functions ---
-
+    // ==========================================
+    // 3. FUNGSI UNTUK LIST ITEM (Anak / Isi Tabel)
+    // ==========================================
     fun getListItems(noteId: Int): StateFlow<List<ListItem>> {
         return repository.getItemsByNoteId(noteId)
             .stateIn(
@@ -76,7 +83,7 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
             val currentMax = repository.getMaxSequenceNumber(noteId) ?: 0
             val newItem = ListItem(
                 noteId = noteId,
-                sequenceNumber = currentMax + 1,
+                sequenceNumber = currentMax + 1, // Penomoran otomatis berurutan
                 nama = nama,
                 catatan1 = catatan1,
                 catatan2 = catatan2
@@ -92,6 +99,10 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
     }
 }
 
+// ==========================================
+// 4. FACTORY CLASS
+// ==========================================
+/**[NoteViewModelFactory] bertugas sebagai "Pabrik" pembuat NoteViewModel.*/
 class NoteViewModelFactory(private val repository: NoteRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(NoteViewModel::class.java)) {

@@ -9,9 +9,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.notextra.domain.model.ListItem
 import com.example.notextra.domain.model.Note
 
+/**Konfigurasi utama Room Database untuk aplikasi Note Xtra.*/
 @Database(
     entities = [Note::class, ListItem::class],
-    version = 3,
+    version = 3,        // Versi database saat ini
     exportSchema = false
 )
 abstract class NoteDatabase : RoomDatabase() {
@@ -19,31 +20,33 @@ abstract class NoteDatabase : RoomDatabase() {
     abstract val listItemDao: ListItemDao
 
     companion object {
+        // ==========================================
+        // SINGLETON INSTANCE & MIGRATIONS
+        // ==========================================
+        /**@Volatile memastikan bahwa nilai INSTANCE selalu terbarui dan terlihat oleh semua thread (proses) secara instan.*/
         @Volatile
         private var INSTANCE: NoteDatabase? = null
-
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Tambah kolom category
                 db.execSQL("ALTER TABLE notes ADD COLUMN category TEXT NOT NULL DEFAULT 'Work'")
-                // Tambah kolom isPinned (SQLite menyimpan Boolean sebagai angka 0 dan 1)
                 db.execSQL("ALTER TABLE notes ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0")
             }
         }
 
+        // ==========================================
+        // DATABASE BUILDER
+        // ==========================================
+        /**Mengambil instance database. Jika belum ada, maka akan dibuat (inisialisasi).*/
         fun getInstance(context: Context): NoteDatabase {
-            // Jika INSTANCE tidak null, kembalikan INSTANCE.
-            // Jika null, buat database baru.
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     NoteDatabase::class.java,
                     "note_database"
                 )
-                    .addMigrations(MIGRATION_1_2) // 1. Prioritaskan jalur aman (data tidak hilang)
-                    .fallbackToDestructiveMigration() // 2. Jaring pengaman (reset kalau error)
+                    .addMigrations(MIGRATION_1_2)
+                    .fallbackToDestructiveMigration()
                     .build()
-
                 INSTANCE = instance
                 instance
             }

@@ -1,5 +1,7 @@
 package com.example.notextra.ui.main
 
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,11 +47,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +77,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
+/**[ListDetailScreen] adalah layar yang menampilkan detail dari LIST.*/
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListDetailScreen(
@@ -80,30 +85,40 @@ fun ListDetailScreen(
     viewModel: NoteViewModel,
     onNavigateBack: () -> Unit
 ) {
+    // ==========================================
+    // 1. INISIALISASI DATA & UTILITY
+    // ==========================================
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+
+    // Mengambil data Induk (Note) dan Anak-anaknya (ListItem)
     val listNotes by viewModel.listNotes.collectAsState()
     val note = listNotes.find { it.id == noteId }
-
     val listItemsFlow = remember(noteId) { viewModel.getListItems(noteId) }
     val listItems by listItemsFlow.collectAsState()
 
-    var showAddDataDialog by remember { mutableStateOf(false) }
-
-    val context = LocalContext.current
-    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-
-    var hasChanges by remember { mutableStateOf(false) }
+    // ==========================================
+    // 2. STATE MANAGEMENT (Variabel Pengontrol Layar)
+    // ==========================================
+    // State Penyimpanan & Navigasi
+    var hasChanges by remember { mutableStateOf(false) } // Menandai jika ada item yang diubah
     var showSaveDialog by remember { mutableStateOf(false) }
     var showBackDialog by remember { mutableStateOf(false) }
+
+    // State Kontrol Tabel
+    var isViewMode by remember { mutableStateOf(true) } // Toggle Mode View/Edit (UI Only)
+    var showAddDataDialog by remember { mutableStateOf(false) }
 
     // State Sorting & Filtering
     var showSortMenu by remember { mutableStateOf(false) }
     var sortOption by remember { mutableStateOf("Default") }
-
     var showFilterMenu by remember { mutableStateOf(false) }
     var filterOption by remember { mutableStateOf("Default") }
 
-    // Logika Pintar: Filter dulu, baru di-Sort
+    // ==========================================
+    // 3. LOGIKA BISNIS (Sorting & Filtering)
+    // ==========================================
     val displayedItems = remember(listItems, sortOption, filterOption) {
         val filtered = when (filterOption) {
             "Belum" -> listItems.filter { it.status == "Belum" }
@@ -112,7 +127,6 @@ fun ListDetailScreen(
             "Ditunda" -> listItems.filter { it.status == "Ditunda" }
             else -> listItems
         }
-
         when (sortOption) {
             "A-Z" -> filtered.sortedBy { it.nama.lowercase() }
             "Z-A" -> filtered.sortedByDescending { it.nama.lowercase() }
@@ -120,23 +134,29 @@ fun ListDetailScreen(
         }
     }
 
+    // ==========================================
+    // 4. FUNGSI AKSI UTAMA SIMPAN
+    // ==========================================
     val performSave = {
         focusManager.clearFocus()
         if (hasChanges && note != null) {
             viewModel.updateNote(note, note.title, note.content)
         }
-        android.widget.Toast.makeText(context, "Perubahan berhasil disimpan", android.widget.Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Perubahan berhasil disimpan", Toast.LENGTH_SHORT).show()
         onNavigateBack()
     }
 
-    androidx.activity.compose.BackHandler {
+    BackHandler {
         if (hasChanges) showBackDialog = true else onNavigateBack()
     }
 
+    // ==========================================
+    // 5. UI UTAMA (SCAFFOLD)
+    // ==========================================
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nama Aplikasi", color = Color.White) },
+                title = { Text("Note Xtra", color = Color.White) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = AppHeaderColor),
                 navigationIcon = {
                     IconButton(onClick = { if (hasChanges) showBackDialog = true else onNavigateBack() }) {
@@ -152,75 +172,51 @@ fun ListDetailScreen(
         },
         containerColor = AppBackgroundColor
     ) { paddingValues ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp).verticalScroll(rememberScrollState())
-        ) {
-            // State untuk tombol mode (sementara hanya UI)
-            var isViewMode by remember { mutableStateOf(true) }
 
-            // --- CARD 1: JUDUL LIST (DESAIN BARU) ---
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // --- SECTION 1: HEADER CARD (Judul & Tanggal) ---
             Card(
                 colors = CardDefaults.cardColors(containerColor = AppSecondaryColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp), // Padding diperbesar agar lebih lega
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // SISI KIRI: Tumpukan Judul dan Tanggal
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = note?.title ?: "Judul List",
-                            color = Color.White,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Normal
-                        )
+                        Text(text = note?.title ?: "Judul List", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Normal)
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = note?.let { DateUtils.formatTimestamp(it.timestamp) } ?: "tanggal",
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 14.sp
-                        )
+                        Text(text = note?.let { DateUtils.formatTimestamp(it.timestamp) } ?: "tanggal", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
                     }
-
                     Spacer(modifier = Modifier.width(16.dp))
-
-                    // SISI KANAN: Tombol Toggle Mode
                     Button(
-                        onClick = { isViewMode = !isViewMode }, // Toggle state saat diklik
-                        colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor), // Warna ungu
+                        onClick = { isViewMode = !isViewMode },
+                        colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor),
                         shape = RoundedCornerShape(12.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        // Menggunakan ikon bawaan Menu (Garis Tiga)
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Mode",
-                            tint = Color.White,
-                            modifier = Modifier.height(20.dp).width(20.dp)
-                        )
+                        Icon(Icons.Default.Menu, contentDescription = "Mode", tint = Color.White, modifier = Modifier.height(20.dp).width(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isViewMode) "View" else "Edit",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text(if (isViewMode) "View" else "Edit", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // --- SECTION 2: WORKSPACE (Tabel & Kontrol) ---
             Card(
                 colors = CardDefaults.cardColors(containerColor = AppPrimaryColor),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
-
                     Button(
                         onClick = { showAddDataDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = TableAccentColor),
@@ -230,6 +226,7 @@ fun ListDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Baris Kontrol: Search, Filter, Sort
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -240,15 +237,13 @@ fun ListDetailScreen(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // --- TOMBOL FILTER ---
                         Box {
-                            // 1. Logika penentuan warna tombol secara dinamis
                             val filterButtonColor = when (filterOption) {
                                 "Selesai" -> StatusSelesaiColor
                                 "In Progress" -> StatusInProgressColor
                                 "Ditunda" -> StatusDitundaColor
                                 "Belum" -> StatusBelumColor
-                                else -> TableAccentColor.copy(alpha = 0.8f) // Warna ungu default
+                                else -> TableAccentColor.copy(alpha = 0.8f)
                             }
                             Button(
                                 onClick = { showFilterMenu = true },
@@ -257,25 +252,18 @@ fun ListDetailScreen(
                                 modifier = Modifier.height(36.dp),
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Menu,
-                                    contentDescription = "Mode",
-                                    tint = Color.White,
-                                    modifier = Modifier.height(20.dp).width(20.dp)
-                                )
+                                Icon(Icons.Default.Menu, contentDescription = "Mode", tint = Color.White, modifier = Modifier.height(20.dp).width(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(if (filterOption == "Default") "Filter" else filterOption, fontSize = 11.sp) }
-
+                                Text(if (filterOption == "Default") "Filter" else filterOption, fontSize = 11.sp)
+                            }
                             DropdownMenu(expanded = showFilterMenu, onDismissRequest = { showFilterMenu = false }) {
                                 listOf("Default", "Belum", "Selesai", "In Progress", "Ditunda").forEach { opt ->
                                     DropdownMenuItem(text = { Text(opt, fontSize = 12.sp) }, onClick = { filterOption = opt; showFilterMenu = false })
                                 }
                             }
                         }
-
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // --- TOMBOL SORTING ---
                         Box {
                             Button(
                                 onClick = { showSortMenu = true },
@@ -284,15 +272,10 @@ fun ListDetailScreen(
                                 modifier = Modifier.height(36.dp),
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Menu,
-                                    contentDescription = "Mode",
-                                    tint = Color.White,
-                                    modifier = Modifier.height(20.dp).width(20.dp)
-                                )
+                                Icon(Icons.Default.Menu, contentDescription = "Mode", tint = Color.White, modifier = Modifier.height(20.dp).width(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(if (sortOption == "Default") "Sort" else sortOption, fontSize = 11.sp) }
-
+                                Text(if (sortOption == "Default") "Sort" else sortOption, fontSize = 11.sp)
+                            }
                             DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                                 listOf("Default", "A-Z", "Z-A").forEach { opt ->
                                     DropdownMenuItem(text = { Text(opt, fontSize = 12.sp) }, onClick = { sortOption = opt; showSortMenu = false })
@@ -301,9 +284,12 @@ fun ListDetailScreen(
                         }
                     }
 
+                    // --- STRUKTUR TABEL ---
                     val columnWidths = listOf(40.dp, 220.dp, 100.dp, 220.dp, 220.dp, 60.dp)
 
                     Column(modifier = Modifier.fillMaxWidth().border(1.dp, Color.White).horizontalScroll(rememberScrollState())) {
+
+                        // Header Tabel
                         Row(modifier = Modifier.background(TableHeaderColor).height(IntrinsicSize.Max)) {
                             TableCellHeader("No", columnWidths[0])
                             TableCellHeader("Nama", columnWidths[1])
@@ -313,32 +299,28 @@ fun ListDetailScreen(
                             TableCellHeader("Check", columnWidths[5])
                         }
 
-                        // Logika UX: Baris minimal 3 hanya berlaku jika tidak ada filter yang aktif.
-                        val displayRowCount = if (filterOption == "Default") {
-                            max(3, displayedItems.size)
-                        } else {
-                            displayedItems.size
-                        }
+                        // Render minimal 3 baris kosong jika data kurang dari 3 (hanya jika tidak ada filter)
+                        val displayRowCount = if (filterOption == "Default") max(3, displayedItems.size) else displayedItems.size
+
                         for (i in 0 until displayRowCount) {
                             Row(modifier = Modifier.background(Color.White).height(IntrinsicSize.Max)) {
                                 if (i < displayedItems.size) {
+                                    // Render data
                                     val item = displayedItems[i]
                                     TableCellBody(item.sequenceNumber.toString(), columnWidths[0])
                                     TableCellBody(item.nama, columnWidths[1])
-
                                     TableCellDropdown(item.status, columnWidths[2]) { newStatus ->
                                         viewModel.updateListItem(item.copy(status = newStatus))
                                         hasChanges = true
                                     }
-
                                     TableCellBody(item.catatan1, columnWidths[3])
                                     TableCellBody(item.catatan2, columnWidths[4])
-
                                     TableCellCheckbox(item.isChecked, columnWidths[5]) { isChecked ->
                                         viewModel.updateListItem(item.copy(isChecked = isChecked))
                                         hasChanges = true
                                     }
                                 } else {
+                                    // Render baris kosong (Placeholder)
                                     TableCellBody("", columnWidths[0])
                                     TableCellBody("", columnWidths[1])
                                     TableCellDropdown("Belum", columnWidths[2]) { }
@@ -355,18 +337,16 @@ fun ListDetailScreen(
         }
     }
 
-    // --- POPUP DIALOGS ---
+    // ==========================================
+    // 6. KUMPULAN POP-UP DIALOG
+    // ==========================================
     if (showAddDataDialog) {
         var nama by remember { mutableStateOf("") }
         var catatan1 by remember { mutableStateOf("") }
         var catatan2 by remember { mutableStateOf("") }
-
-        // Validasi: Cek apakah ada yang melebihi batas
         val isNamaError = nama.length > 150
         val isCat1Error = catatan1.length > 150
         val isCat2Error = catatan2.length > 150
-
-        // Tombol hanya nyala jika semua teks <= 150 DAN nama tidak kosong
         val isFormValid = !isNamaError && !isCat1Error && !isCat2Error && nama.isNotBlank()
 
         AppBaseDialog(
@@ -385,133 +365,81 @@ fun ListDetailScreen(
         ) {
             Column {
                 OutlinedTextField(
-                    value = nama,
-                    onValueChange = { nama = it },
-                    label = { Text("Nama") },
-                    singleLine = true,
-                    isError = isNamaError,
-                    modifier = Modifier.fillMaxWidth(),
-                    supportingText = {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            if (isNamaError) Text("Melebihi batas!", color = Color.Red) else Spacer(Modifier.width(1.dp))
-                            Text("${nama.length}/150")
-                        }
-                    }
+                    value = nama, onValueChange = { nama = it }, label = { Text("Nama") }, singleLine = true, isError = isNamaError, modifier = Modifier.fillMaxWidth(),
+                    supportingText = { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { if (isNamaError) Text("Melebihi batas!", color = Color.Red) else Spacer(Modifier.width(1.dp)); Text("${nama.length}/150") } }
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-
                 OutlinedTextField(
-                    value = catatan1,
-                    onValueChange = { catatan1 = it },
-                    label = { Text("Catatan 1") },
-                    singleLine = true,
-                    isError = isCat1Error,
-                    modifier = Modifier.fillMaxWidth(),
-                    supportingText = {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            if (isCat1Error) Text("Melebihi batas!", color = Color.Red) else Spacer(Modifier.width(1.dp))
-                            Text("${catatan1.length}/150")
-                        }
-                    }
+                    value = catatan1, onValueChange = { catatan1 = it }, label = { Text("Catatan 1") }, singleLine = true, isError = isCat1Error, modifier = Modifier.fillMaxWidth(),
+                    supportingText = { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { if (isCat1Error) Text("Melebihi batas!", color = Color.Red) else Spacer(Modifier.width(1.dp)); Text("${catatan1.length}/150") } }
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-
                 OutlinedTextField(
-                    value = catatan2,
-                    onValueChange = { catatan2 = it },
-                    label = { Text("Catatan 2") },
-                    minLines = 2,
-                    isError = isCat2Error,
-                    modifier = Modifier.fillMaxWidth(),
-                    supportingText = {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            if (isCat2Error) Text("Melebihi batas!", color = Color.Red) else Spacer(Modifier.width(1.dp))
-                            Text("${catatan2.length}/150")
-                        }
-                    }
+                    value = catatan2, onValueChange = { catatan2 = it }, label = { Text("Catatan 2") }, minLines = 2, isError = isCat2Error, modifier = Modifier.fillMaxWidth(),
+                    supportingText = { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { if (isCat2Error) Text("Melebihi batas!", color = Color.Red) else Spacer(Modifier.width(1.dp)); Text("${catatan2.length}/150") } }
                 )
             }
         }
     }
 
     if (showSaveDialog) {
-        com.example.notextra.ui.components.AppBaseDialog(
-            title = "Simpan Perubahan",
-            confirmText = "Simpan",
-            dismissText = "Batal",
+        AppBaseDialog(
+            title = "Simpan Perubahan", confirmText = "Simpan", dismissText = "Batal",
             onDismissRequest = { showSaveDialog = false },
-            onConfirm = {
-                showSaveDialog = false
-                scope.launch { delay(150); performSave() }
-            }
+            onConfirm = { showSaveDialog = false; scope.launch { delay(150); performSave() } }
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(imageVector = Icons.Default.Info, contentDescription = null, modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp), tint = AppPrimaryColor)
+                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp), tint = AppPrimaryColor)
                 Text("Apakah Anda yakin ingin menyimpan perubahan?", textAlign = TextAlign.Center)
             }
         }
     }
 
     if (showBackDialog) {
-        com.example.notextra.ui.components.AppBaseDialog(
-            title = "Perubahan Belum Disimpan",
-            confirmText = "Simpan",
-            dismissText = "Lanjut",
-            discardText = "Buang",
+        AppBaseDialog(
+            title = "Perubahan Belum Disimpan", confirmText = "Simpan", dismissText = "Lanjut", discardText = "Buang",
             onDismissRequest = { showBackDialog = false },
-            onConfirm = {
-                showBackDialog = false
-                scope.launch { delay(150); performSave() }
-            },
-            onDiscard = {
-                showBackDialog = false
-                onNavigateBack() // Catatan: Ini hanya mengabaikan perubahan timestamp di layar utama
-            }
+            onConfirm = { showBackDialog = false; scope.launch { delay(150); performSave() } },
+            onDiscard = { showBackDialog = false; onNavigateBack() }
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(imageVector = Icons.Default.Info, contentDescription = null, modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp), tint = AppDeleteColor)
+                Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.padding(bottom = 16.dp).height(48.dp).width(48.dp), tint = AppDeleteColor)
                 Text("Perubahan belum disimpan, apa yang ingin Anda lakukan?", textAlign = TextAlign.Center)
             }
         }
     }
 }
 
-// ... (KODE KOMPONEN TABLECELL DI BAWAHNYA TETAP SAMA SEPERTI SEBELUMNYA) ...
-// (Tambahkan fungsi TableCellHeader, TableCellBody, TableCellDropdown, dan TableCellCheckbox di sini agar tidak error)
-
+// ==========================================
+// 7. KOMPONEN PEMBANTU (HELPER) UNTUK TABEL
+// ==========================================
+/** Desain untuk sel di baris paling atas tabel (Header) */
 @Composable
 fun TableCellHeader(text: String, width: Dp) {
     Box(
-        modifier = Modifier
-            .width(width)
-            .fillMaxHeight()
-            .heightIn(min = 56.dp)
-            .border(0.5.dp, Color.LightGray)
-            .padding(8.dp),
+        modifier = Modifier.width(width).fillMaxHeight().heightIn(min = 56.dp).border(0.5.dp, Color.LightGray).padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(text = text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center)
     }
 }
+
+/** Desain untuk sel teks biasa di dalam tabel */
 @Composable
 fun TableCellBody(text: String, width: Dp) {
     Box(
-        modifier = Modifier
-            .width(width)
-            .fillMaxHeight()
-            .heightIn(min = 56.dp)
-            .border(0.5.dp, Color.LightGray)
-            .padding(8.dp),
-        contentAlignment = Alignment.CenterStart) {
+        modifier = Modifier.width(width).fillMaxHeight().heightIn(min = 56.dp).border(0.5.dp, Color.LightGray).padding(8.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
         Text(text = text, color = Color.Black, fontSize = 12.sp, maxLines = 5, overflow = TextOverflow.Ellipsis, lineHeight = 16.sp)
     }
 }
 
+/** Desain sel interaktif berupa Dropdown untuk mengubah status item */
 @Composable
 fun TableCellDropdown(status: String, width: Dp, onStatusChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val options = listOf("Belum", "Selesai", "In Progress", "Ditunda")
-
     val badgeColor = when (status) {
         "Selesai" -> StatusSelesaiColor
         "In Progress" -> StatusInProgressColor
@@ -534,6 +462,7 @@ fun TableCellDropdown(status: String, width: Dp, onStatusChange: (String) -> Uni
     }
 }
 
+/** Desain sel interaktif berupa Kotak Centang (Checkbox) */
 @Composable
 fun TableCellCheckbox(isChecked: Boolean, width: Dp, onCheckedChange: (Boolean) -> Unit) {
     Box(modifier = Modifier.width(width).fillMaxHeight().heightIn(min = 56.dp).border(0.5.dp, Color.LightGray), contentAlignment = Alignment.Center) {

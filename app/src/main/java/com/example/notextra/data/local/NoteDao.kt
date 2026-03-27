@@ -11,20 +11,29 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
-
+    // ==========================================
+    // READ OPERATIONS (Operasi Membaca Data)
+    // ==========================================
+    /**Mengambil seluruh data catatan (gabungan Note dan List) dari database.*/
     @Query("SELECT * FROM notes ORDER BY timestamp DESC")
     fun getAllNotes(): Flow<List<Note>>
 
-    // Fungsi khusus untuk memfilter berdasarkan tipe note (REGULAR atau LIST)
+    /**Mengambil data berdasarkan tipenya.*/
     @Query("SELECT * FROM notes WHERE noteType = :type ORDER BY timestamp DESC")
     fun getNotesByType(type: String): Flow<List<Note>>
 
+    // ==========================================
+    // WRITE OPERATIONS (Operasi Mengubah Data)
+    // ==========================================
+    /**Menyimpan Note/List baru ke database.*/
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: Note)
 
-    @Delete
-    suspend fun deleteNote(note: Note)
-
+    /**Memperbarui isi, judul, kategori, atau status Pinned dari Note/List yang sudah ada.*/
     @Update
     suspend fun updateNote(note: Note)
+
+    /**Menghapus Note/List dari database secara permanen.*/
+    @Delete
+    suspend fun deleteNote(note: Note)
 }

@@ -10,14 +10,14 @@ class NoteRepository(
     private val noteDao: NoteDao,
     private val listItemDao: ListItemDao
 ) {
-    // --- KUMPULAN FUNGSI UNTUK NOTE BIASA (Biarkan sama persis) ---
+    // --- KUMPULAN FUNGSI UNTUK NOTE BIASA ---
     fun getAllNotes(): Flow<List<Note>> = noteDao.getAllNotes()
     fun getNotesByType(type: String): Flow<List<Note>> = noteDao.getNotesByType(type)
     suspend fun insertNote(note: Note) = noteDao.insertNote(note)
     suspend fun updateNote(note: Note) = noteDao.updateNote(note)
     suspend fun deleteNote(note: Note) = noteDao.deleteNote(note)
 
-    // --- TAMBAHKAN KUMPULAN FUNGSI BARU UNTUK LIST ITEM (TABEL) ---
+    // --- KUMPULAN FUNGSI BARU UNTUK LIST ITEM (TABEL) ---
     fun getItemsByNoteId(noteId: Int): Flow<List<ListItem>> = listItemDao.getItemsByNoteId(noteId)
     suspend fun getMaxSequenceNumber(noteId: Int): Int? = listItemDao.getMaxSequenceNumber(noteId)
     suspend fun insertListItem(item: ListItem) = listItemDao.insertItem(item)

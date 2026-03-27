@@ -5,6 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "notes")
 data class Note(
+    // ID unik untuk setiap Note (Dibuat otomatis oleh sistem berurutan: 1, 2, 3...)
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val title: String,

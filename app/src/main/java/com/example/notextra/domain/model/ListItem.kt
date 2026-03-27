@@ -7,27 +7,29 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "list_items",
-    // Membuat relasi: Setiap ListItem dimiliki oleh satu Note
+    // ==========================================
+    // RELASI ANTAR TABEL (FOREIGN KEY)
+    // ==========================================
     foreignKeys = [
         ForeignKey(
             entity = Note::class,
-            parentColumns = ["id"], // ID dari tabel notes
-            childColumns = ["noteId"], // Disambungkan ke kolom noteId di tabel ini
+            parentColumns = ["id"],
+            childColumns = ["noteId"],
+            // CASCADE: Jika Note induknya dihapus, maka semua ListItem di dalamnya ikut terhapus otomatis
             onDelete = ForeignKey.CASCADE
         )
     ],
-    // Index membantu mempercepat pencarian data saat list mulai berisi ribuan baris
     indices = [Index("noteId")]
 )
 data class ListItem(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    val noteId: Int,             // Penghubung ke Note mana list ini berada
-    val sequenceNumber: Int,     // Nomor urut absolut (1, 2, ... 11) sesuai request Anda
+    val id: Int = 0, // ID unik untuk setiap item
+    val noteId: Int, // Penghubung (Foreign Key) untuk mengetahui item ini milik Note/List yang mana
+    val sequenceNumber: Int,
     val nama: String,
-    val status: String = "Belum", // Default value
+    val status: String = "Belum",
     val catatan1: String,
-    val catatan2: String,        // Akan kita fungsikan sebagai Link nanti
+    val catatan2: String,
     val isChecked: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis() // Penentu urutan (yang terbaru akan ditaruh di atas)
+    val createdAt: Long = System.currentTimeMillis()
 )
