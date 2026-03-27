@@ -5,6 +5,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -113,7 +115,7 @@ fun MainScreen(
 
     // Menentukan background dinamis berdasarkan Tab yang aktif
     val currentBgColor = when (selectedTab) {
-        0 -> Color(0xFFC4D8E7)
+        0 -> Color(0xFFFFF1F2)
         1 -> Color(0xFFF0F9FF)
         else -> Color(0xFFF9FAFB)
     }
@@ -263,7 +265,7 @@ fun MainScreen(
 
                                 if (pinnedNotes.size > 4) {
                                     Text(
-                                        text = "Tampilkan lebih banyak >>", color = FabColor, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                                        text = "Show More >>", color = FabColor, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                                         modifier = Modifier.fillMaxWidth().clickable { /* TODO: Arahkan ke screen baru nanti */ }.padding(vertical = 8.dp), textAlign = TextAlign.Center
                                     )
                                 }
@@ -413,7 +415,7 @@ fun MainScreen(
 
     if (noteToDelete != null) {
         AppBaseDialog(
-            title = "Konfirmasi Hapus", confirmText = "Hapus", dismissText = "Batal",
+            title = "Konfirmasi Hapus", confirmText = "Delete", dismissText = "Cancel",
             onDismissRequest = { noteToDelete = null },
             onConfirm = { noteToDelete?.let { viewModel.deleteNote(it) }; noteToDelete = null }
         ) {
@@ -478,7 +480,11 @@ fun AllNoteCardItem(note: Note, barColor: Color, onClick: () -> Unit, onLongClic
 /** Dialog untuk mengedit nama, kategori, dan status pin secara cepat */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickEditNoteDialog(note: Note, onDismiss: () -> Unit, onSave: (String, String, Boolean) -> Unit) {
+fun QuickEditNoteDialog(
+    note: Note,
+    onDismiss: () -> Unit,
+    onSave: (String, String, Boolean) -> Unit
+) {
     var judul by remember { mutableStateOf(note.title) }
     var kategori by remember { mutableStateOf(note.category) }
     var isPinned by remember { mutableStateOf(note.isPinned) }
@@ -486,32 +492,149 @@ fun QuickEditNoteDialog(note: Note, onDismiss: () -> Unit, onSave: (String, Stri
     val opsiKategori = listOf("Work", "Personal", "Organization", "Idea")
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFE5E7EB))) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text(text = note.title, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextDark, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-
-                Text("Judul Note", color = TextDark, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp, start = 4.dp))
-                OutlinedTextField(value = judul, onValueChange = { judul = it }, maxLines = 2, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), colors = outlinedTextFieldColors(focusedBorderColor = TextDark, unfocusedBorderColor = Color.Gray, containerColor = Color.Transparent))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Kategori", color = TextDark, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp, start = 4.dp))
-                Box {
-                    OutlinedTextField(value = kategori, onValueChange = {}, readOnly = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Dropdown", modifier = Modifier.clickable { expandedKategori = true }) }, colors = outlinedTextFieldColors(focusedBorderColor = TextDark, unfocusedBorderColor = Color.Gray, containerColor = Color.Transparent))
-                    DropdownMenu(expanded = expandedKategori, onDismissRequest = { expandedKategori = false }) {
-                        opsiKategori.forEach { opt -> DropdownMenuItem(text = { Text(opt) }, onClick = { kategori = opt; expandedKategori = false }) }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                // --- HEADER ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Quick edit", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(note.title, fontSize = 14.sp, color = FabColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    // Tombol Silang (Close) di pojok kanan atas
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF3F4F6))
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextGray, modifier = Modifier.size(20.dp))
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                androidx.compose.material3.HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // --- 1. Kotak Input Judul ---
+                OutlinedTextField(
+                    value = judul,
+                    onValueChange = { judul = it },
+                    label = { Text("TITLE", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                    maxLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = FabColor,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedButton(onClick = { isPinned = !isPinned }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, Color.Gray), colors = ButtonDefaults.outlinedButtonColors(containerColor = if (isPinned) TableAccentColor.copy(alpha = 0.2f) else Color.Transparent)) {
-                    Text(if (isPinned) "Ter-Pinned 📌" else "Pinned", color = TextDark)
+                // --- 2. Kotak Dropdown Kategori ---
+                Box {
+                    OutlinedTextField(
+                        value = kategori,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("CATEGORY", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        trailingIcon = {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Dropdown", modifier = Modifier.clickable { expandedKategori = true })
+                        },
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = FabColor,
+                            unfocusedBorderColor = Color.LightGray
+                        )
+                    )
+                    DropdownMenu(expanded = expandedKategori, onDismissRequest = { expandedKategori = false }) {
+                        opsiKategori.forEach { opt ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(getCategoryColor(opt)))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(opt, color = TextDark)
+                                    }
+                                },
+                                onClick = { kategori = opt; expandedKategori = false }
+                            )
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- 3. Toggle Switch Pinned ---
+                // Menggunakan border untuk meniru desain mockup
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { isPinned = !isPinned } // Bisa diklik di seluruh kotaknya
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Pinned", color = TextDark, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text("Visible on home screen", color = TextGray, fontSize = 14.sp)
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = isPinned,
+                            onCheckedChange = { isPinned = it },
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = FabColor,
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = Color.LightGray,
+                                uncheckedBorderColor = Color.Transparent
+                            )
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Button(onClick = onDismiss, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7986CB))) { Text("Batal") }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Button(onClick = { onSave(judul, kategori, isPinned) }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7986CB))) { Text("Simpan") }
+                // --- 4. Action Buttons (Batal & Simpan) ---
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Tombol Batal
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color.LightGray)
+                    ) {
+                        Text("Cancel", color = FabColor, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Tombol Simpan
+                    Button(
+                        onClick = { onSave(judul, kategori, isPinned) },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = FabColor)
+                    ) {
+                        Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -589,7 +712,7 @@ fun CreateListDialog(onDismiss: () -> Unit, onCreate: (String, String, String) -
                         Box(modifier = Modifier.weight(1f).fillMaxHeight().background(FabColor, RoundedCornerShape(2.dp)))
                     }
                     Spacer(modifier = Modifier.height(24.dp))
-                    Button(onClick = { if (listTitle.isNotBlank()) onCreate(selectedType, listTitle, listCategory) }, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = FabColor), shape = RoundedCornerShape(12.dp)) { Text("Buat List", fontWeight = FontWeight.Bold) }
+                    Button(onClick = { if (listTitle.isNotBlank()) onCreate(selectedType, listTitle, listCategory) }, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = FabColor), shape = RoundedCornerShape(12.dp)) { Text("Create List", fontWeight = FontWeight.Bold) }
                     Spacer(modifier = Modifier.height(8.dp))
                     androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel", color = FabColor, fontWeight = FontWeight.Bold) }
                 }
@@ -646,8 +769,8 @@ fun CreateNoteDialog(onDismiss: () -> Unit, onCreate: (String, String, String) -
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color.LightGray)) { Text("Batal", color = FabColor, fontWeight = FontWeight.Bold) }
-                    Button(onClick = { if (title.isNotBlank()) onCreate(title, content, category) }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = FabColor)) { Text("Simpan", color = Color.White, fontWeight = FontWeight.Bold) }
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color.LightGray)) { Text("Cancel", color = FabColor, fontWeight = FontWeight.Bold) }
+                    Button(onClick = { if (title.isNotBlank()) onCreate(title, content, category) }, modifier = Modifier.weight(1f).height(48.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = FabColor)) { Text("Save", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
             }
         }

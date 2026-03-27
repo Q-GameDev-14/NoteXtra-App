@@ -39,9 +39,9 @@ fun AppBaseDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     onDiscard: (() -> Unit)? = null,
-    confirmText: String = "Simpan",
-    dismissText: String = "Batal",
-    discardText: String = "Buang",
+    confirmText: String = "Save",
+    dismissText: String = "Cancel",
+    discardText: String = "Discard",
     isConfirmEnabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
