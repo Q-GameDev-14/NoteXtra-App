@@ -473,7 +473,7 @@ fun MainScreen(
 fun PinnedNoteCardMockup(modifier: Modifier = Modifier, note: Note, bgColor: Color, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     Box(
         modifier = modifier // 2. Gunakan modifier dari parameter
-            .height(110.dp) // Tingginya tetap
+            .height(110.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(bgColor)
             .combinedClickable(
