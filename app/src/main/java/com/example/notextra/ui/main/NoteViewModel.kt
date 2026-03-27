@@ -27,13 +27,15 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
             initialValue = emptyList()
         )
 
-    fun addNote(title: String, content: String, noteType: String = "REGULAR") {
+    fun addNote(title: String, content: String, noteType: String = "REGULAR", category: String = "Work", isPinned: Boolean = false) {
         viewModelScope.launch {
             val newNote = Note(
                 title = title,
                 content = content,
                 timestamp = System.currentTimeMillis(),
-                noteType = noteType
+                noteType = noteType,
+                category = category,
+                isPinned = isPinned
             )
             repository.insertNote(newNote)
         }
@@ -45,12 +47,14 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
         }
     }
 
-    fun updateNote(note: Note, newTitle: String, newContent: String) {
+    fun updateNote(note: Note, newTitle: String, newContent: String, newCategory: String = note.category, newIsPinned: Boolean = note.isPinned) {
         viewModelScope.launch {
             val updatedNote = note.copy(
                 title = newTitle,
                 content = newContent,
-                timestamp = System.currentTimeMillis()
+                timestamp = System.currentTimeMillis(),
+                category = newCategory,
+                isPinned = newIsPinned
             )
             repository.updateNote(updatedNote)
         }

@@ -10,5 +10,7 @@ data class Note(
     val title: String,
     val content: String,
     val timestamp: Long,
-    val noteType: String = "REGULAR"
+    val noteType: String = "REGULAR",
+    val category: String = "Work",
+    val isPinned: Boolean = false
 )

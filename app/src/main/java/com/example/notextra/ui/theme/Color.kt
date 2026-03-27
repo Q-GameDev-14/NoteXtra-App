@@ -59,3 +59,13 @@ val StatusSelesaiColor = Color(0xFF4CAF50)     // Hijau
 val StatusInProgressColor = Color(0xFFFF9800)  // Oranye
 val StatusDitundaColor = Color(0xFFEF4444)     // Merah menyesuaikan Delete Color
 val StatusBelumColor = Color(0xFF7986CB)       // Ungu/Biru Netral
+
+// --- WARNA DESAIN BARU NOTE XTRA (DARI CLAUDE) ---
+val BgColor = Color(0xFFF8F9FA)           // Off-white / light gray untuk background
+val TextDark = Color(0xFF1B1B2F)          // Biru dongker gelap untuk teks
+val TextGray = Color(0xFF8E8E93)          // Abu-abu untuk teks kecil/subtitle
+val FabColor = Color(0xFF2954D1)          // Biru terang untuk tombol (+) dan aktif
+val CardBlue = Color(0xFF3B82F6)          // Biru Pinned Card
+val CardGreen = Color(0xFF10B981)         // Hijau Pinned Card
+val CardOrange = Color(0xFFF59E0B)        // Oranye (Variasi)
+val CardSurface = Color(0xFFFFFFFF)       // Putih murni untuk All Notes Card
