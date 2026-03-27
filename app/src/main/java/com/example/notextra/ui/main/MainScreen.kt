@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -41,6 +42,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -108,14 +110,96 @@ fun MainScreen(
                 // Background TopBar menjadi transparan agar menyatu dengan background aplikasi
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = BgColor),
                 actions = {
+                    // State untuk mengontrol pop-up menu titik tiga
+                    var showMoreMenu by remember { mutableStateOf(false) }
+
                     // Tombol Search (UI Mode)
                     Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color.LightGray.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Search, contentDescription = "Search", tint = TextDark, modifier = Modifier.size(24.dp))
                     }
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    // Tombol More (UI Mode)
-                    Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color.LightGray.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More", tint = TextDark, modifier = Modifier.size(24.dp))
+
+                    // Tombol More (UI Mode) + Dropdown Menu
+                    Box {
+                        // Tombol Titik Tiga
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.LightGray.copy(alpha = 0.3f))
+                                .clickable { showMoreMenu = true }, // <--- Trigger menu saat diklik
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More", tint = TextDark, modifier = Modifier.size(24.dp))
+                        }
+
+                        // --- DROPDOWN MENU BARU ---
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false },
+                            modifier = Modifier.background(Color.White).width(200.dp)
+                        ) {
+                            // 1. SECTION: SORT
+                            Text(
+                                text = "SORT",
+                                color = TextGray,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Title A - Z", color = TextDark) },
+                                onClick = { showMoreMenu = false } // Nanti fungsinya ditaruh di sini
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Title Z - A", color = TextDark) },
+                                onClick = { showMoreMenu = false }
+                            )
+
+                            androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color.LightGray.copy(alpha = 0.3f))
+
+                            // 2. SECTION: FILTER
+                            Text(
+                                text = "FILTER",
+                                color = TextGray,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            val categories = listOf("Work", "Personal", "Idea", "Organization")
+                            categories.forEach { cat ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            // Bulatan warna sesuai kategori
+                                            Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(getCategoryColor(cat)))
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(cat, color = TextDark)
+                                        }
+                                    },
+                                    onClick = { showMoreMenu = false }
+                                )
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = Color.LightGray.copy(alpha = 0.3f))
+
+                            // 3. SECTION: MANAGE
+                            Text(
+                                text = "MANAGE",
+                                color = TextGray,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Select All", color = TextDark) },
+                                onClick = { showMoreMenu = false }
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                 }
