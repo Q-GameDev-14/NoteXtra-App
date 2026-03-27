@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,8 +27,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -98,9 +102,13 @@ fun MainScreen(
     var noteToQuickEdit by remember { mutableStateOf<Note?>(null) }
 
     var showAddDialog by remember { mutableStateOf(false) }
-    var showListOptionDialog by remember { mutableStateOf(false) }
-    var showAddListTitleDialog by remember { mutableStateOf(false) }
+    var showCreateListModal by remember { mutableStateOf(false) }
 
+    val currentBgColor = when (selectedTab) {
+        0 -> Color(0xFFC4D8E7) // Off-white bawaan dari Note
+        1 -> Color(0xFFF0F9FF) // Biru sangat muda (Ocean Teal muda) untuk List
+        else -> Color(0xFFF9FAFB) // Abu-abu netral untuk Settings
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -108,7 +116,7 @@ fun MainScreen(
                     Text("Note Xtra", fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = TextDark)
                 },
                 // Background TopBar menjadi transparan agar menyatu dengan background aplikasi
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgColor),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = currentBgColor),
                 actions = {
                     // State untuk mengontrol pop-up menu titik tiga
                     var showMoreMenu by remember { mutableStateOf(false) }
@@ -246,7 +254,7 @@ fun MainScreen(
             // FAB Biru Besar di Kanan Bawah
             if (selectedTab != 2) {
                 FloatingActionButton(
-                    onClick = { if (selectedTab == 0) showAddDialog = true else if (selectedTab == 1) showListOptionDialog = true },
+                    onClick = { if (selectedTab == 0) showAddDialog = true else if (selectedTab == 1) showCreateListModal = true },
                     containerColor = FabColor,
                     contentColor = Color.White,
                     shape = RoundedCornerShape(20.dp), // Agak membulat bukan lingkaran penuh
@@ -256,7 +264,7 @@ fun MainScreen(
                 }
             }
         },
-        containerColor = BgColor
+        containerColor = currentBgColor
     ) { paddingValues ->
         when (selectedTab) {
             0 -> {
@@ -464,56 +472,33 @@ fun MainScreen(
     // --- DIALOG AREA (SAMA PERSIS SEPERTI SEBELUMNYA) ---
 
     if (showAddDialog) {
-        var title by remember { mutableStateOf("") }
-        var content by remember { mutableStateOf("") }
-        AppBaseDialog(
-            title = "Tambah Note Baru", confirmText = "Simpan", dismissText = "Batal",
-            onDismissRequest = { showAddDialog = false },
-            onConfirm = { if (title.isNotBlank()) { viewModel.addNote(title, content, noteType = "REGULAR"); showAddDialog = false } }
-        ) {
-            Column {
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Judul") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Isi Note") }, modifier = Modifier.fillMaxWidth())
+        CreateNoteDialog(
+            onDismiss = { showAddDialog = false },
+            onCreate = { judul, isi, kategori ->
+                // Masukkan judul, isi, dan kategori ke ViewModel
+                viewModel.addNote(
+                    title = judul,
+                    content = isi,
+                    noteType = "REGULAR",
+                    category = kategori
+                )
+                showAddDialog = false
             }
-        }
+        )
     }
 
-    if (showListOptionDialog) {
-        var selectedTableType by remember { mutableStateOf("Default Table") }
-        AppBaseDialog(
-            title = "Tambah List", confirmText = "Buat", dismissText = "Batal",
-            onDismissRequest = { showListOptionDialog = false },
-            onConfirm = {
-                if (selectedTableType == "Default Table") { showListOptionDialog = false; showAddListTitleDialog = true }
-                else { Toast.makeText(context, "Fitur Custom Table belum tersedia", Toast.LENGTH_SHORT).show() }
+    if (showCreateListModal) {
+        CreateListDialog(
+            onDismiss = { showCreateListModal = false },
+            onCreate = { tipe, judul, kategori ->
+                if (tipe == "Default") {
+                    viewModel.addNote(judul, content = "", noteType = "LIST", category = kategori)
+                    showCreateListModal = false
+                } else {
+                    Toast.makeText(context, "Custom Table belum tersedia", Toast.LENGTH_SHORT).show()
+                }
             }
-        ) {
-            Column {
-                OutlinedButton(
-                    onClick = { selectedTableType = "Default Table" }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selectedTableType == "Default Table") Color.LightGray.copy(alpha = 0.5f) else Color.Transparent),
-                    border = BorderStroke(width = 1.dp, color = if (selectedTableType == "Default Table") AppHeaderColor else Color.Gray)
-                ) { Text("Default Table", color = Color.Black) }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { selectedTableType = "Custom Table" }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selectedTableType == "Custom Table") Color.LightGray.copy(alpha = 0.5f) else Color.Transparent),
-                    border = BorderStroke(width = 1.dp, color = if (selectedTableType == "Custom Table") AppHeaderColor else Color.Gray)
-                ) { Text("Custom Table", color = Color.Black) }
-            }
-        }
-    }
-
-    if (showAddListTitleDialog) {
-        var title by remember { mutableStateOf("") }
-        AppBaseDialog(
-            title = "Nama List", confirmText = "Buat List", dismissText = "Batal",
-            onDismissRequest = { showAddListTitleDialog = false },
-            onConfirm = { if (title.isNotBlank()) { viewModel.addNote(title, content = "", noteType = "LIST"); showAddListTitleDialog = false } }
-        ) {
-            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Judul List Baru") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        }
+        )
     }
 
     if (noteToDelete != null) {
@@ -756,5 +741,280 @@ fun getCategoryColor(category: String): Color {
         "Organization" -> CardOrange
         "Idea" -> TableAccentColor // Ungu
         else -> CardBlue
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateListDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String, String, String) -> Unit // Mengirim (Tipe, Judul)
+) {
+    var step by remember { mutableIntStateOf(1) }
+    var selectedType by remember { mutableStateOf("Default") }
+    var listTitle by remember { mutableStateOf("") }
+
+    // --- STATE BARU UNTUK KATEGORI ---
+    var listCategory by remember { mutableStateOf("Work") }
+    var expandedCategory by remember { mutableStateOf(false) }
+    val kategoriOptions = listOf("Work", "Personal", "Organization", "Idea")
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                // Garis Drag Handle (Mockup visual di atas)
+                Box(modifier = Modifier.width(40.dp).height(4.dp).clip(CircleShape).background(Color.LightGray.copy(alpha = 0.5f)))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (step == 1) {
+                    // --- STEP 1: CHOOSE TYPE ---
+                    Text("Tambah List", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                    Text("Step 1 of 2 — choose type", fontSize = 14.sp, color = FabColor)
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // Opsi: Default
+                        TypeSelectionCard(
+                            modifier = Modifier.weight(1f), title = "Default", subtitle = "Ready-made",
+                            icon = Icons.Default.List, isSelected = selectedType == "Default", onClick = { selectedType = "Default" }
+                        )
+                        // Opsi: Custom
+                        TypeSelectionCard(
+                            modifier = Modifier.weight(1f), title = "Custom", subtitle = "Define columns",
+                            icon = Icons.Default.Build, isSelected = selectedType == "Custom", onClick = { selectedType = "Custom" }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Progress Bar Step 1
+                    Row(modifier = Modifier.fillMaxWidth().height(4.dp)) {
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(FabColor, RoundedCornerShape(2.dp)))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(2.dp)))
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    androidx.compose.material3.Button(
+                        onClick = { step = 2 }, modifier = Modifier.fillMaxWidth().height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = FabColor), shape = RoundedCornerShape(12.dp)
+                    ) { Text("Continue →", fontWeight = FontWeight.Bold) }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel", color = FabColor, fontWeight = FontWeight.Bold) }
+
+                } else {
+                    // --- STEP 2: NAME YOUR LIST ---
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back", tint = TextGray, modifier = Modifier.clickable { step = 1 })
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Back to type", color = TextGray, fontSize = 14.sp, modifier = Modifier.clickable { step = 1 })
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Name your list", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.fillMaxWidth())
+                    Text("Step 2 of 2 — $selectedType Table", fontSize = 14.sp, color = FabColor, modifier = Modifier.fillMaxWidth())
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    OutlinedTextField(
+                        value = listTitle, onValueChange = { listTitle = it },
+                        label = { Text("List title") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedBorderColor = FabColor, unfocusedBorderColor = FabColor)
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // KOTAK DROPDOWN KATEGORI (Sekalian nampilin titik warna)
+                    Box {
+                        OutlinedTextField(
+                            value = listCategory, onValueChange = {}, readOnly = true, label = { Text("Category") },
+                            modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                            trailingIcon = { Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, contentDescription = "Dropdown", modifier = Modifier.clickable { expandedCategory = true }) },
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedBorderColor = FabColor, unfocusedBorderColor = FabColor)
+                        )
+                        androidx.compose.material3.DropdownMenu(expanded = expandedCategory, onDismissRequest = { expandedCategory = false }) {
+                            kategoriOptions.forEach { opt ->
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(getCategoryColor(opt)))
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(opt, color = TextDark)
+                                        }
+                                    },
+                                    onClick = { listCategory = opt; expandedCategory = false }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Progress Bar Step 2
+                    Row(modifier = Modifier.fillMaxWidth().height(4.dp)) {
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(FabColor, RoundedCornerShape(2.dp)))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(FabColor, RoundedCornerShape(2.dp)))
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = { if (listTitle.isNotBlank()) onCreate(selectedType, listTitle, listCategory) },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = FabColor), shape = RoundedCornerShape(12.dp)
+                    ) { Text("Buat List", fontWeight = FontWeight.Bold) }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel", color = FabColor, fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
+    }
+}
+
+// Sub-komponen untuk kotak pilihan tipe list
+@Composable
+fun TypeSelectionCard(modifier: Modifier = Modifier, title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+    val borderColor = if (isSelected) FabColor else Color.LightGray.copy(alpha = 0.5f)
+    val bgColor = if (isSelected) Color(0xFFF0F4FF) else Color.Transparent
+
+    Card(
+        modifier = modifier.height(130.dp).clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(2.dp, borderColor),
+        colors = CardDefaults.cardColors(containerColor = bgColor)
+    ) {
+        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFE0E7FF)), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = null, tint = FabColor, modifier = Modifier.size(24.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(title, fontWeight = FontWeight.Bold, color = TextDark)
+            Text(subtitle, fontSize = 11.sp, color = TextGray)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateNoteDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String, String, String) -> Unit // Mengirim (Judul, Isi, Kategori)
+) {
+    var title by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("") }
+
+    // State untuk Kategori
+    var category by remember { mutableStateOf("Work") }
+    var expandedCategory by remember { mutableStateOf(false) }
+    val kategoriOptions = listOf("Work", "Personal", "Organization", "Idea")
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp), // Sudut membulat elegan
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // --- HEADER (Dari Gambar 2) ---
+                Text("New note", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Fill in the details below", fontSize = 14.sp, color = FabColor, fontWeight = FontWeight.Medium)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // --- FIELD JUDUL (Maks 2 Baris) ---
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("TITLE", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2, // Maksimal 2 baris sesuai permintaan
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = FabColor,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- FIELD KONTEN (Lebih besar/tinggi) ---
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = { content = it },
+                    label = { Text("CONTENT", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp), // Memaksa tingginya minimal 1.5x - 2x dari judul
+                    minLines = 3,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = FabColor,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- FIELD KATEGORI (Sama seperti List) ---
+                Box {
+                    OutlinedTextField(
+                        value = category, onValueChange = {}, readOnly = true,
+                        label = { Text("CATEGORY", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                        trailingIcon = { Icon(androidx.compose.material.icons.Icons.Default.KeyboardArrowDown, contentDescription = "Dropdown", modifier = Modifier.clickable { expandedCategory = true }) },
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedBorderColor = FabColor, unfocusedBorderColor = Color.LightGray)
+                    )
+                    androidx.compose.material3.DropdownMenu(expanded = expandedCategory, onDismissRequest = { expandedCategory = false }) {
+                        kategoriOptions.forEach { opt ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(getCategoryColor(opt)))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(opt, color = TextDark)
+                                    }
+                                },
+                                onClick = { category = opt; expandedCategory = false }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // --- TOMBOL BATAL & SIMPAN (Dari Gambar 1) ---
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Tombol Batal (Garis Pinggir)
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray)
+                    ) {
+                        Text("Batal", color = FabColor, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Tombol Simpan (Biru Solid)
+                    androidx.compose.material3.Button(
+                        onClick = { if (title.isNotBlank()) onCreate(title, content, category) },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = FabColor)
+                    ) {
+                        Text("Simpan", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
