@@ -2,6 +2,7 @@ package com.example.notextra.ui.main
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,14 +10,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,12 +51,17 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.notextra.ui.components.AppBaseDialog
 import com.example.notextra.ui.theme.AppBackgroundColor
 import com.example.notextra.ui.theme.AppDeleteColor
 import com.example.notextra.ui.theme.AppHeaderColor
 import com.example.notextra.ui.theme.AppPrimaryColor
 import com.example.notextra.ui.theme.AppSecondaryColor
+import com.example.notextra.ui.theme.BgColor
+import com.example.notextra.ui.theme.FabColor
+import com.example.notextra.ui.theme.TextDark
+import com.example.notextra.ui.theme.TextGray
 import com.example.notextra.utils.DateUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -103,84 +116,123 @@ fun EditNoteScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Nama Aplikasi", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = AppHeaderColor),
+            CenterAlignedTopAppBar(
+                title = {
+                    Text("Note Xtra", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextDark)
+                },
+                // Background TopBar kita buat Putih agar tombol birunya menonjol (sesuai gambar Claude)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White),
                 navigationIcon = {
-                    IconButton(onClick = { if (hasChanges) showBackDialog = true else onNavigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    // Tombol BACK (Style biru pudar / Light Blue)
+                    Button(
+                        onClick = { if (hasChanges) showBackDialog = true else onNavigateBack() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFF0F4FF), // Biru sangat pudar
+                            contentColor = FabColor             // Teks biru tua
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(start = 12.dp).height(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Back", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 },
                 actions = {
-                    TextButton(onClick = { if (hasChanges) showSaveDialog = true else onNavigateBack() }) {
-                        Text("Save", color = Color.White, fontWeight = FontWeight.Bold)
+                    // Tombol SAVE (Style biru solid)
+                    androidx.compose.material3.Button(
+                        onClick = { if (hasChanges) showSaveDialog = true else onNavigateBack() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FabColor, // Biru solid
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(end = 12.dp).height(36.dp)
+                    ) {
+                        Text("Save", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             )
         },
         containerColor = AppBackgroundColor
     ) { paddingValues ->
+// --- ISI LAYAR EDIT NOTE ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .background(BgColor) // Menggunakan background cerah
+                .padding(horizontal = 24.dp, vertical = 24.dp) // Padding lebih lega
         ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = AppSecondaryColor),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        modifier = Modifier.weight(1f),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        placeholder = { Text("Judul Note", color = Color.LightGray) }
-                    )
-                    if (note != null) {
-                        Text(
-                            text = DateUtils.formatTimestamp(note.timestamp),
-                            color = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(end = 16.dp)
-                        )
+            // TAHAP 2: JUDUL NOTE & TANGGAL (Desain Clean)
+            // Memakai BasicTextField agar transparan tanpa garis bawah bawaan Material
+            BasicTextField(
+                value = title,
+                onValueChange = { title = it },
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 32.sp, // Judul besar dan tebal
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { innerTextField ->
+                    if (title.isEmpty()) {
+                        Text("Judul Note...", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.LightGray)
                     }
+                    innerTextField()
                 }
-            }
+            )
 
-            Spacer(modifier = Modifier.padding(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = AppPrimaryColor),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 10,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
-                    ),
-                    placeholder = { Text("Isi Note......", color = Color.LightGray) }
-                )
-            }
+            // Tanggal Edit
+            Text(
+                text = note?.let { DateUtils.formatTimestamp(it.timestamp) } ?: "Tanggal Baru",
+                color = TextGray,
+                fontSize = 14.sp
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Garis tipis pemisah antara header dan isi note
+            androidx.compose.material3.HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // TAHAP 3: KOTAK ISI NOTE (Desain Rounded Outline Biru)
+            androidx.compose.material3.OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f), // Membiarkan kotak ini memanjang mengisi sisa layar ke bawah
+                shape = RoundedCornerShape(16.dp),
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = FabColor,     // Garis pinggir biru saat diketik
+                    unfocusedBorderColor = FabColor,   // Garis pinggir biru saat diam
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                ),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 16.sp,
+                    color = TextDark,
+                    lineHeight = 24.sp // Jarak antar baris agar nyaman dibaca
+                ),
+                placeholder = {
+                    Text(
+                        "Start writing your note here. Tap anywhere to begin editing.",
+                        color = Color.Gray
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
