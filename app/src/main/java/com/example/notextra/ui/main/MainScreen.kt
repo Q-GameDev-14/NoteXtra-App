@@ -386,12 +386,14 @@ fun MainScreen(
     if (showCreateListModal) {
         CreateListDialog(
             onDismiss = { showCreateListModal = false },
-            onCreate = { tipe, judul, kategori ->
+            onCreate = { tipe, judul, kategori, konfigurasiKolom ->
                 if (tipe == "Default") {
                     viewModel.addNote(judul, content = "", noteType = "LIST", category = kategori)
                     showCreateListModal = false
                 } else {
-                    Toast.makeText(context, "Custom Table belum tersedia", Toast.LENGTH_SHORT).show()
+                    // TODO: Logic Custom Table (JSON) akan kita buat di next step!
+                    Toast.makeText(context, "Menerima ${konfigurasiKolom.size} kolom!", Toast.LENGTH_SHORT).show()
+                    showCreateListModal = false
                 }
             }
         )
