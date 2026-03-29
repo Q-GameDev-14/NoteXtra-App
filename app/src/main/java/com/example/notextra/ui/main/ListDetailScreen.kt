@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
@@ -34,7 +33,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -53,17 +51,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.notextra.ui.components.AppBaseDialog
+import com.example.notextra.ui.components.TableCellBody
+import com.example.notextra.ui.components.TableCellCheckbox
+import com.example.notextra.ui.components.TableCellDropdown
+import com.example.notextra.ui.components.TableCellHeader
 import com.example.notextra.ui.theme.AppDeleteColor
 import com.example.notextra.ui.theme.AppPrimaryColor
 import com.example.notextra.ui.theme.BgColor
@@ -97,6 +97,7 @@ fun ListDetailScreen(
     var showBackDialog by remember { mutableStateOf(false) }
 
     var showAddDataDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     // State Sorting & Filtering
     var showSortMenu by remember { mutableStateOf(false) }
@@ -104,19 +105,34 @@ fun ListDetailScreen(
     var showFilterMenu by remember { mutableStateOf(false) }
     var filterOption by remember { mutableStateOf("Default") }
 
-    val displayedItems = remember(listItems, sortOption, filterOption) {
-        val filtered = when (filterOption) {
-            "Belum" -> listItems.filter { it.status == "Belum" }
-            "Selesai" -> listItems.filter { it.status == "Selesai" }
-            "Proses" -> listItems.filter { it.status == "Proses" } // Diubah ke Proses agar sesuai mockup Claude
-            "Ditunda" -> listItems.filter { it.status == "Ditunda" }
-            else -> listItems
+// Logika Pintar: Search -> Filter -> Sort
+    val displayedItems = remember(listItems, sortOption, filterOption, searchQuery) {
+        var result = listItems
+
+        // 1. Eksekusi Pencarian (Search) di 3 kolom sekaligus
+        if (searchQuery.isNotBlank()) {
+            val query = searchQuery.lowercase()
+            result = result.filter {
+                it.nama.lowercase().contains(query) ||
+                        it.catatan1.lowercase().contains(query) ||
+                        it.catatan2.lowercase().contains(query)
+            }
         }
 
+        // 2. Eksekusi Filter Status
+        result = when (filterOption) {
+            "Belum" -> result.filter { it.status == "Belum" }
+            "Selesai" -> result.filter { it.status == "Selesai" }
+            "Proses" -> result.filter { it.status == "Proses" }
+            "Ditunda" -> result.filter { it.status == "Ditunda" }
+            else -> result
+        }
+
+        // 3. Eksekusi Sorting
         when (sortOption) {
-            "A-Z" -> filtered.sortedBy { it.nama.lowercase() }
-            "Z-A" -> filtered.sortedByDescending { it.nama.lowercase() }
-            else -> filtered
+            "A-Z" -> result.sortedBy { it.nama.lowercase() }
+            "Z-A" -> result.sortedByDescending { it.nama.lowercase() }
+            else -> result
         }
     }
 
@@ -231,6 +247,7 @@ fun ListDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Kotak Search
+// Kotak Search (Sekarang bisa diketik)
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -240,11 +257,37 @@ fun ListDetailScreen(
                             .padding(horizontal = 12.dp),
                         contentAlignment = Alignment.CenterStart
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Search, contentDescription = "Search", tint = TextGray, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Search...", color = TextGray, fontSize = 13.sp)
-                        }
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp, color = TextDark),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { innerTextField ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Search, contentDescription = "Search", tint = TextGray, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    // Placeholder muncul kalau kosong
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        if (searchQuery.isEmpty()) {
+                                            Text("Search...", color = TextGray, fontSize = 13.sp)
+                                        }
+                                        innerTextField()
+                                    }
+                                    // Tombol (X) untuk clear text jika ada isinya
+                                    if (searchQuery.isNotEmpty()) {
+                                        Icon(
+                                            imageVector = androidx.compose.material.icons.Icons.Default.Clear,
+                                            contentDescription = "Clear",
+                                            tint = TextGray,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clickable { searchQuery = "" }
+                                        )
+                                    }
+                                }
+                            }
+                        )
                     }
 
                     // Tombol Filter
@@ -310,7 +353,7 @@ fun ListDetailScreen(
                 }
 
                 // TABEL (Struktur & Logika 100% sama, hanya ganti style komponen sel di bawah)
-                val columnWidths = listOf(40.dp, 220.dp, 100.dp, 220.dp, 220.dp, 60.dp)
+                val columnWidths = listOf(64.dp, 220.dp, 100.dp, 220.dp, 220.dp, 60.dp)
 
                 // Membungkus tabel dengan Card putih bergaya clean
                 Card(
@@ -427,109 +470,5 @@ fun ListDetailScreen(
                 Text("Perubahan belum disimpan, apa yang ingin Anda lakukan?", textAlign = TextAlign.Center)
             }
         }
-    }
-}
-
-// ==========================================
-// KOMPONEN SEL TABEL (DESAIN BARU CLAUDE)
-// ==========================================
-
-@Composable
-fun TableCellHeader(text: String, width: Dp) {
-    Box(
-        modifier = Modifier
-            .width(width)
-            .fillMaxHeight()
-            .heightIn(min = 48.dp) // Sedikit lebih ramping
-            .background(Color(0xFFF8FAFC)) // Warna biru sangat pucat untuk header
-            .border(0.5.dp, Color(0xFFE2E8F0)) // Garis abu-abu sangat tipis
-            .padding(8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Font dark blue, bold
-        Text(text = text, color = Color(0xFF1E293B), fontWeight = FontWeight.Bold, fontSize = 13.sp, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-fun TableCellBody(text: String, width: Dp, isCenter: Boolean = false) {
-    Box(
-        modifier = Modifier
-            .width(width)
-            .fillMaxHeight()
-            .heightIn(min = 48.dp)
-            .background(Color.White)
-            .border(0.5.dp, Color(0xFFE2E8F0))
-            .padding(12.dp), // Padding diperbesar agar teks bernapas
-        contentAlignment = if (isCenter) Alignment.Center else Alignment.CenterStart
-    ) {
-        Text(
-            text = text,
-            color = if (isCenter) TextGray else Color(0xFF334155), // Jika angka urut, warnanya abu-abu
-            fontSize = 13.sp,
-            maxLines = 5,
-            overflow = TextOverflow.Ellipsis,
-            lineHeight = 18.sp,
-            fontWeight = if (isCenter) FontWeight.Bold else FontWeight.Normal
-        )
-    }
-}
-
-@Composable
-fun TableCellDropdown(status: String, width: Dp, onStatusChange: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = listOf("Belum", "Selesai", "Proses", "Ditunda")
-
-    // Palet warna pastel ala Claude
-    val (bgColor, textColor) = when (status) {
-        "Selesai" -> Pair(Color(0xFFDCFCE7), Color(0xFF166534)) // Hijau muda, teks hijau tua
-        "Proses" -> Pair(Color(0xFFDBEAFE), Color(0xFF1E40AF))  // Biru muda, teks biru tua
-        "Belum" -> Pair(Color(0xFFFEF3C7), Color(0xFF92400E))   // Kuning pucat, teks oranye gelap
-        "Ditunda" -> Pair(Color(0xFFFEE2E2), Color(0xFF991B1B)) // Merah pucat, teks merah gelap
-        else -> Pair(Color(0xFFF1F5F9), Color(0xFF475569))
-    }
-
-    Box(
-        modifier = Modifier
-            .width(width)
-            .fillMaxHeight()
-            .heightIn(min = 48.dp)
-            .background(Color.White)
-            .border(0.5.dp, Color(0xFFE2E8F0))
-            .clickable { expanded = true }
-            .padding(8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Kotak Badge Status (Pill shape melengkung sempurna)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .height(32.dp)
-                .clip(RoundedCornerShape(16.dp)) // Melengkung bulat seperti pil
-                .background(bgColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = status, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color.White)) {
-            options.forEach { option ->
-                DropdownMenuItem(text = { Text(option, fontSize = 13.sp, color = TextDark) }, onClick = { onStatusChange(option); expanded = false })
-            }
-        }
-    }
-}
-
-@Composable
-fun TableCellCheckbox(isChecked: Boolean, width: Dp, onCheckedChange: (Boolean) -> Unit) {
-    Box(
-        modifier = Modifier
-            .width(width)
-            .fillMaxHeight()
-            .heightIn(min = 48.dp)
-            .background(Color.White)
-            .border(0.5.dp, Color(0xFFE2E8F0)),
-        contentAlignment = Alignment.Center
-    ) {
-        Checkbox(checked = isChecked, onCheckedChange = onCheckedChange)
     }
 }
