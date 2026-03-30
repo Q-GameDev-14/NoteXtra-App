@@ -31,5 +31,6 @@ data class ListItem(
     val catatan1: String,
     val catatan2: String,
     val isChecked: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    var dynamicData: String = "{}" // Akan menyimpan JSON dari Map<String, String> (Nama Kolom -> Isi)
 )

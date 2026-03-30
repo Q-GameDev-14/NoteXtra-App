@@ -24,6 +24,10 @@ fun AppNavigation(viewModel: NoteViewModel) {
                 },
                 onNavigateToListDetail = { noteId ->
                     navController.navigate("table_detail/$noteId")
+                },
+                // --- TAMBAHAN BARU: Navigasi ke Pinned Notes ---
+                onNavigateToPinnedNotes = {
+                    navController.navigate("pinned_notes")
                 }
             )
         }
@@ -60,6 +64,24 @@ fun AppNavigation(viewModel: NoteViewModel) {
                 viewModel = viewModel,
                 onNavigateBack = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        // ==========================================
+        // RUTE 4: LAYAR SEMUA PINNED NOTES (DESAIN B)
+        // ==========================================
+        composable("pinned_notes") {
+            PinnedNotesListScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToEdit = { noteId ->
+                    navController.navigate("edit/$noteId")
+                },
+                onNavigateToListDetail = { noteId ->
+                    navController.navigate("table_detail/$noteId")
                 }
             )
         }

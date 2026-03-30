@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,6 +34,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.notextra.domain.model.ColumnConfig
+import com.example.notextra.domain.model.DropdownOption
 import com.example.notextra.domain.model.Note
 import com.example.notextra.ui.theme.*
 import com.example.notextra.utils.DateUtils
@@ -143,18 +146,6 @@ fun getCategoryColor(category: String): Color {
 }
 
 // ==========================================
-// DATA CLASS UNTUK CUSTOM TABLE
-// ==========================================
-data class DropdownOption(val label: String, val color: Color)
-
-data class ColumnConfig(
-    var name: String = "",
-    var width: String = "Normal", // Narrow, Normal, Wide
-    var type: String = "Text",    // Text, Dropdown, Checkbox, Date, Image
-    var dropdownOptions: List<DropdownOption> = emptyList()
-)
-
-// ==========================================
 // WIZARD DIALOG CREATE LIST (4 STEPS)
 // ==========================================
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,6 +173,19 @@ fun CreateListDialog(
     // State Step 4 (Column Setup)
     // Akan diinisialisasi saat masuk ke Step 4 berdasarkan numCols
     var columnConfigs by remember { mutableStateOf(listOf<ColumnConfig>()) }
+
+    // --- TAMBAHKAN STATE INI ---
+    var showOptionDialogForCol by remember { mutableStateOf<Int?>(null) }
+    var newOptionLabel by remember { mutableStateOf("") }
+    var newOptionColor by remember { mutableStateOf(Color(0xFFDCFCE7)) } // Default Hijau muda
+    val colorPalette = listOf(
+        Color(0xFFDCFCE7), // Hijau muda
+        Color(0xFFDBEAFE), // Biru muda
+        Color(0xFFFEF3C7), // Kuning pucat
+        Color(0xFFFEE2E2), // Merah pucat
+        Color(0xFFF3E8FF), // Ungu muda
+        Color(0xFFF1F5F9)  // Abu-abu
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -454,15 +458,22 @@ fun CreateListDialog(
                                         // Menampilkan opsi yang sudah ada
                                         colConfig.dropdownOptions.forEachIndexed { optIndex, opt ->
                                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Box(modifier = Modifier.size(16.dp).clip(CircleShape).background(opt.color))
+                                                // Terjemahkan Hex String dari Database kembali ke Color UI
+                                                val parsedColor = try { Color(android.graphics.Color.parseColor(opt.colorHex)) } catch (e: Exception) { Color.LightGray }
+
+                                                Box(modifier = Modifier.size(16.dp).clip(CircleShape).background(parsedColor))
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(opt.label, fontSize = 13.sp, color = TextDark, modifier = Modifier.weight(1f))
                                             }
                                         }
 
-                                        // Tombol tambah opsi (Sementara dummy UI)
+                                        // Tombol tambah opsi
                                         OutlinedButton(
-                                            onClick = { /* TODO: Buka dialog tambah warna & teks */ },
+                                            onClick = {
+                                                newOptionLabel = ""
+                                                newOptionColor = colorPalette[0]
+                                                showOptionDialogForCol = index
+                                            },
                                             modifier = Modifier.fillMaxWidth().height(36.dp),
                                             shape = RoundedCornerShape(8.dp)
                                         ) { Text("+ Tambah Opsi", fontSize = 12.sp) }
@@ -480,6 +491,71 @@ fun CreateListDialog(
                         },
                         modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = FabColor), shape = RoundedCornerShape(12.dp)
                     ) { Text("Buat Custom Table", fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
+        // --- MINI DIALOG UNTUK TAMBAH OPSI DROPDOWN ---
+        if (showOptionDialogForCol != null) {
+            Dialog(onDismissRequest = { showOptionDialogForCol = null }) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("Tambah Opsi Dropdown", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextDark)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = newOptionLabel,
+                            onValueChange = { newOptionLabel = it },
+                            label = { Text("Nama Opsi (misal: Selesai)", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = FabColor)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text("Pilih Warna Background:", fontSize = 12.sp, color = TextGray)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            colorPalette.forEach { color ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .border(
+                                            width = if (newOptionColor == color) 2.dp else 0.dp,
+                                            color = if (newOptionColor == color) FabColor else Color.Transparent,
+                                            shape = CircleShape
+                                        )
+                                        .clickable { newOptionColor = color }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = { showOptionDialogForCol = null }) { Text("Batal", color = TextGray) }
+                            Button(
+                                onClick = {
+                                    if (newOptionLabel.isNotBlank()) {
+                                        val colIndex = showOptionDialogForCol!!
+                                        val col = columnConfigs[colIndex]
+
+                                        // Terjemahkan Color UI menjadi Teks Hex String untuk Database
+                                        val hexString = String.format("#%06X", 0xFFFFFF and newOptionColor.toArgb())
+
+                                        val updatedOptions = col.dropdownOptions + DropdownOption(newOptionLabel, hexString) // <--- Sekarang tidak error
+                                        columnConfigs = columnConfigs.toMutableList().also { it[colIndex] = col.copy(dropdownOptions = updatedOptions) }
+                                        showOptionDialogForCol = null
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = FabColor)
+                            ) { Text("Simpan") }
+                        }
+                    }
                 }
             }
         }

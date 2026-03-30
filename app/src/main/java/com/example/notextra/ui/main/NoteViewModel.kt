@@ -8,6 +8,7 @@ import com.example.notextra.domain.model.ListItem
 import com.example.notextra.domain.model.Note
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -23,7 +24,10 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
             initialValue = emptyList()
         )
 
-    val listNotes: StateFlow<List<Note>> = repository.getNotesByType("LIST")
+    val listNotes: StateFlow<List<Note>> = repository.getAllNotes()
+        .map { allNotes ->
+            allNotes.filter { it.noteType == "LIST" || it.noteType == "CUSTOM_LIST" }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -33,7 +37,7 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
     // ==========================================
     // 2. FUNGSI UNTUK NOTE UTAMA (Induk)
     // ==========================================
-    fun addNote(title: String, content: String, noteType: String = "REGULAR", category: String = "Work", isPinned: Boolean = false) {
+    fun addNote(title: String, content: String, noteType: String = "REGULAR", category: String = "Work", isPinned: Boolean = false, customColumnsJson: String = "[]") {
         viewModelScope.launch {
             val newNote = Note(
                 title = title,
@@ -41,7 +45,8 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
                 timestamp = System.currentTimeMillis(),
                 noteType = noteType,
                 category = category,
-                isPinned = isPinned
+                isPinned = isPinned,
+                customColumns = customColumnsJson
             )
             repository.insertNote(newNote)
         }
@@ -78,7 +83,13 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
             )
     }
 
-    fun addListItem(noteId: Int, nama: String, catatan1: String, catatan2: String) {
+    fun addListItem(
+        noteId: Int,
+        nama: String = "-",
+        catatan1: String = "-",
+        catatan2: String = "-",
+        dynamicDataJson: String = "{}" // <--- TAMBAHAN BARU: Parameter untuk nerima JSON
+    ) {
         viewModelScope.launch {
             val currentMax = repository.getMaxSequenceNumber(noteId) ?: 0
             val newItem = ListItem(
@@ -86,7 +97,8 @@ class NoteViewModel(private val repository: NoteRepository) : ViewModel() {
                 sequenceNumber = currentMax + 1, // Penomoran otomatis berurutan
                 nama = nama,
                 catatan1 = catatan1,
-                catatan2 = catatan2
+                catatan2 = catatan2,
+                dynamicData = dynamicDataJson // <--- MASUKKAN JSON KE ENTITY DATABASE
             )
             repository.insertListItem(newItem)
         }

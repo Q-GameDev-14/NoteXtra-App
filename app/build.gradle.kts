@@ -66,6 +66,8 @@ dependencies {
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 
+    implementation("com.google.code.gson:gson:2.10.1")
+
     // 2. ViewModel Compose (Untuk nyambungin data ke UI Jetpack Compose)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
 

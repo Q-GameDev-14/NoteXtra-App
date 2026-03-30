@@ -4,15 +4,17 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.notextra.domain.model.ListItem
 import com.example.notextra.domain.model.Note
 
 /**Konfigurasi utama Room Database untuk aplikasi Note Xtra.*/
+@TypeConverters(Converters::class)
 @Database(
     entities = [Note::class, ListItem::class],
-    version = 3,        // Versi database saat ini
+    version = 4,        // Versi database saat ini
     exportSchema = false
 )
 abstract class NoteDatabase : RoomDatabase() {

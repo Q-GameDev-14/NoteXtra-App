@@ -4,14 +4,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
@@ -31,6 +38,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.notextra.ui.theme.*
+import androidx.compose.material3.Icon
+import com.example.notextra.domain.model.DropdownOption
 
 // ==========================================
 // KOMPONEN SEL TABEL
@@ -130,5 +139,104 @@ fun TableCellCheckbox(isChecked: Boolean, width: Dp, onCheckedChange: (Boolean) 
         contentAlignment = Alignment.Center
     ) {
         Checkbox(checked = isChecked, onCheckedChange = onCheckedChange)
+    }
+}
+
+// ==========================================
+// SEL D DROPDOWN DINAMIS (UNTUK CUSTOM LIST)
+// ==========================================
+@Composable
+fun TableCellDropdownCustom(
+    text: String,
+    dropdownOptions: List<DropdownOption>,
+    width: Dp,
+    onValueChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // Cari opsi yang terpilih sekarang buat nyari warnanya
+    val selectedOption = dropdownOptions.find { it.label == text }
+
+    // Terjemahkan Hex String dari Database menjadi Color UI
+    val badgeColor = try {
+        Color(android.graphics.Color.parseColor(selectedOption?.colorHex ?: "#F1F5F9"))
+    } catch (e: Exception) {
+        Color.LightGray
+    }
+
+    // Sel yang bisa di-klik
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(50.dp) // Sesuaikan tinggi bawaanmu
+            .border(width = (0.5).dp, color = Color.LightGray.copy(alpha = 0.5f)) // Style clean bawaanmu
+            .clickable { expanded = true }
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        // Tampilan Badge Status yang terpilih
+        if (text.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(badgeColor)
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(text = text, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1E3A8A))
+            }
+        }
+        Icon(
+            Icons.Default.KeyboardArrowDown,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp).align(Alignment.CenterEnd),
+            tint = TextGray
+        )
+
+        // Menu Dropdown-nya
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            dropdownOptions.forEach { opt ->
+                // Terjemahkan warna opsi di menu
+                val optBgColor = try { Color(android.graphics.Color.parseColor(opt.colorHex)) } catch (e: Exception) { Color.LightGray }
+
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(16.dp).clip(CircleShape).background(optBgColor))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(opt.label, fontSize = 13.sp)
+                        }
+                    },
+                    onClick = {
+                        onValueChange(opt.label) // Kirim nama opsi barunya
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+// ==========================================
+// SEL CHECKBOX DINAMIS (UNTUK CUSTOM LIST)
+// ==========================================
+@Composable
+fun TableCellCheckboxCustom(
+    isCheckedString: String, // Kita terima data "true" / "false" dari JSON Map
+    width: Dp,
+    onValueChange: (Boolean) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(50.dp)
+            .border(width = (0.5).dp, color = Color.LightGray.copy(alpha = 0.5f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Checkbox(
+            checked = isCheckedString == "true",
+            onCheckedChange = { onValueChange(it) },
+            colors = CheckboxDefaults.colors(checkedColor = FabColor)
+        )
     }
 }

@@ -76,7 +76,8 @@ import com.example.notextra.ui.theme.*
 fun MainScreen(
     viewModel: NoteViewModel,
     onNavigateToEdit: (Int) -> Unit,
-    onNavigateToListDetail: (Int) -> Unit
+    onNavigateToListDetail: (Int) -> Unit,
+    onNavigateToPinnedNotes: () -> Unit // <--- TAMBAHKAN BARIS INI
 ) {
     val context = LocalContext.current
     // ==========================================
@@ -249,8 +250,15 @@ fun MainScreen(
 
                                 if (pinnedNotes.size > 4) {
                                     Text(
-                                        text = "Show More >>", color = FabColor, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.fillMaxWidth().clickable { /* TODO: Arahkan ke screen baru nanti */ }.padding(vertical = 8.dp), textAlign = TextAlign.Center
+                                        text = "Tampilkan lebih banyak >>",
+                                        color = Color(0xFF1E40AF),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onNavigateToPinnedNotes() } // <--- KUNCI NAVIGASINYA DI SINI
+                                            .padding(top = 16.dp, bottom = 24.dp)
                                     )
                                 }
                             }
@@ -326,8 +334,15 @@ fun MainScreen(
 
                                 if (pinnedLists.size > 4) {
                                     Text(
-                                        text = "Tampilkan lebih banyak >>", color = FabColor, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.fillMaxWidth().clickable { /* TODO: Arahkan ke screen baru nanti */ }.padding(vertical = 8.dp), textAlign = TextAlign.Center
+                                        text = "Tampilkan lebih banyak >>",
+                                        color = Color(0xFF1E40AF),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onNavigateToPinnedNotes() } // <--- KUNCI NAVIGASINYA DI SINI
+                                            .padding(top = 16.dp, bottom = 24.dp)
                                     )
                                 }
                             }
@@ -388,13 +403,30 @@ fun MainScreen(
             onDismiss = { showCreateListModal = false },
             onCreate = { tipe, judul, kategori, konfigurasiKolom ->
                 if (tipe == "Default") {
-                    viewModel.addNote(judul, content = "", noteType = "LIST", category = kategori)
-                    showCreateListModal = false
+                    // Simpan List Default biasa
+                    viewModel.addNote(
+                        title = judul,
+                        content = "",
+                        noteType = "LIST",
+                        category = kategori
+                    )
                 } else {
-                    // TODO: Logic Custom Table (JSON) akan kita buat di next step!
-                    Toast.makeText(context, "Menerima ${konfigurasiKolom.size} kolom!", Toast.LENGTH_SHORT).show()
-                    showCreateListModal = false
+                    // --- LOGIC CUSTOM TABLE ---
+                    // 1. Ubah List<ColumnConfig> menjadi teks JSON pakai Gson
+                    val gson = com.google.gson.Gson()
+                    val jsonString = gson.toJson(konfigurasiKolom)
+
+                    // 2. Simpan ke database dengan tipe khusus "CUSTOM_LIST"
+                    viewModel.addNote(
+                        title = judul,
+                        content = "",
+                        noteType = "CUSTOM_LIST", // Bedakan tipenya biar nanti gampang difilter pas ngerender
+                        category = kategori,
+                        customColumnsJson = jsonString
+                    )
+                    android.widget.Toast.makeText(context, "Custom Table Berhasil Dibuat!", android.widget.Toast.LENGTH_SHORT).show()
                 }
+                showCreateListModal = false
             }
         )
     }

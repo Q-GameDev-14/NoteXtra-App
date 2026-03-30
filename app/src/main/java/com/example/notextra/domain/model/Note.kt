@@ -13,5 +13,6 @@ data class Note(
     val timestamp: Long,
     val noteType: String = "REGULAR",
     val category: String = "Work",
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    var customColumns: String = "[]" // Akan menyimpan JSON dari List<ColumnConfig>
 )
